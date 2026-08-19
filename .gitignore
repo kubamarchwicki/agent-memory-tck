@@ -33,6 +33,10 @@ obj/
 *.suo
 *.nupkg
 
+# Java
+target/
+
+
 # IDE
 .idea/
 .vscode/
