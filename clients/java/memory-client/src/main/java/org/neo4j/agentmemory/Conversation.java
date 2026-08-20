@@ -4,16 +4,38 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
-public interface Conversation {
-    UUID id();
+public final class Conversation {
+    private final JdkMemoryClient client;
+    private final UUID id;
+    private final String userId;
 
-    String userId();
+    Conversation(JdkMemoryClient client, UUID id, String userId) {
+        this.client = client;
+        this.id = id;
+        this.userId = userId;
+    }
 
-    CompletableFuture<Message> addMessage(NewMessage message);
+    public UUID id() {
+        return id;
+    }
 
-    CompletableFuture<List<Message>> messages();
+    public String userId() {
+        return userId;
+    }
 
-    CompletableFuture<ConversationContext> context();
+    public CompletableFuture<Message> addMessage(NewMessage message) {
+        return client.addMessage(id, message);
+    }
 
-    CompletableFuture<Void> delete();
+    public CompletableFuture<List<Message>> messages() {
+        return client.messages(id);
+    }
+
+    public CompletableFuture<ConversationContext> context() {
+        return client.context(id);
+    }
+
+    public CompletableFuture<Void> delete() {
+        return client.deleteConversation(id);
+    }
 }

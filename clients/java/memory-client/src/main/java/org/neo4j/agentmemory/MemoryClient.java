@@ -7,14 +7,15 @@ import java.util.concurrent.CompletableFuture;
 
 public interface MemoryClient {
     static MemoryClient create(String apiKey) {
-        if (apiKey == null) {
-            throw new NullPointerException("apiKey");
-        }
         var configuredEndpoint = System.getenv("MEMORY_ENDPOINT");
         var endpoint = URI.create(configuredEndpoint == null || configuredEndpoint.isBlank()
                 ? "https://memory.neo4jlabs.com/v1"
                 : configuredEndpoint.trim());
-        throw new UnsupportedOperationException("No NAMS endpoint client is available for " + endpoint);
+        return create(endpoint, apiKey);
+    }
+
+    static MemoryClient create(URI endpoint, String apiKey) {
+        return JdkMemoryClient.create(endpoint, apiKey);
     }
 
     CompletableFuture<Conversation> createConversation(CreateConversation request);
