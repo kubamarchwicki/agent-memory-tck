@@ -1,0 +1,67 @@
+package org.neo4j.agentmemory.e2e;
+
+import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
+
+import java.util.UUID;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import org.neo4j.agentmemory.Conversation;
+import org.neo4j.agentmemory.CreateConversation;
+import org.neo4j.agentmemory.ListConversations;
+import org.neo4j.agentmemory.MemoryClient;
+import org.neo4j.agentmemory.e2e.assertions.ConversationAssert;
+
+/**
+ * Focused end-to-end tests against the live hosted Neo4j Agent Memory Service.
+ *
+ * <p>The suite exercises only the initial conversation workflows. Maven Failsafe discovers it
+ * during {@code verify}; every workflow is marked skipped when {@code MEMORY_API_KEY} is absent or
+ * blank. Each workflow creates uniquely identified data and owns all state it uses. Workflows are
+ * parallel-safe but run sequentially by default.
+ *
+ * <p>There is deliberately no cleanup harness or provenance tagging. Conversation deletion is a
+ * scenario in its own right, not teardown for other scenarios.
+ */
+@Timeout(value = 30, unit = SECONDS)
+class HostedServiceIT {
+    private static final String API_KEY = environment("MEMORY_API_KEY", "").trim();
+
+    @BeforeEach
+    void requireApiKey() {
+        assumeFalse(API_KEY.isBlank(), "MEMORY_API_KEY is not set");
+    }
+
+    @Test
+    void createsAndListsConversation() {
+        var userId = uniqueUserId();
+        var client = client();
+
+        var created = client.createConversation(new CreateConversation(userId)).join();
+
+        ConversationAssert.assertThat(created)
+                .hasId()
+                .hasUserId(userId);
+
+        var conversations = client.listConversations(new ListConversations(userId, 200)).join();
+
+        assertThat(conversations)
+                .extracting(Conversation::id)
+                .contains(created.id());
+    }
+
+    private static MemoryClient client() {
+        return MemoryClient.create(API_KEY);
+    }
+
+    private static String uniqueUserId() {
+        return "tck-e2e-java-" + UUID.randomUUID();
+    }
+
+    private static String environment(String name, String fallback) {
+        var value = System.getenv(name);
+        return value == null ? fallback : value;
+    }
+}
