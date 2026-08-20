@@ -59,7 +59,7 @@ final class JdkMemoryClient implements MemoryClient {
                 "listConversations",
                 path.toString(),
                 ConversationsResponse.class,
-                response -> values(response.conversations()).stream()
+                response -> nullToEmpty(response.conversations()).stream()
                         .map(this::conversation)
                         .toList());
     }
@@ -87,7 +87,7 @@ final class JdkMemoryClient implements MemoryClient {
                 "messages",
                 "/conversations/" + conversationId + "/messages",
                 MessagesResponse.class,
-                response -> List.copyOf(values(response.messages())));
+                response -> List.copyOf(nullToEmpty(response.messages())));
     }
 
     CompletableFuture<ConversationContext> context(UUID conversationId) {
@@ -197,7 +197,7 @@ final class JdkMemoryClient implements MemoryClient {
         return new Conversation(this, response.id(), response.userId());
     }
 
-    private static <T> List<T> values(List<T> values) {
+    private static <T> List<T> nullToEmpty(List<T> values) {
         return values == null ? List.of() : values;
     }
 

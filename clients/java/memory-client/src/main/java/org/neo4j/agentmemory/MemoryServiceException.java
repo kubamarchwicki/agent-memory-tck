@@ -6,11 +6,8 @@ import java.util.List;
 import java.util.Map;
 
 public final class MemoryServiceException extends MemoryClientException {
-    private final String operation;
-    private final int statusCode;
+    private final ResponseDiagnostics diagnostics;
     private final Map<String, List<String>> responseHeaders;
-    private final String contentType;
-    private final String responseBodyExcerpt;
 
     public MemoryServiceException(
             String operation,
@@ -19,19 +16,17 @@ public final class MemoryServiceException extends MemoryClientException {
             String contentType,
             String responseBodyExcerpt) {
         super(operation + " failed with HTTP " + statusCode);
-        this.operation = operation;
-        this.statusCode = statusCode;
+        this.diagnostics = new ResponseDiagnostics(
+                operation, statusCode, contentType, responseBodyExcerpt);
         this.responseHeaders = immutableHeaders(responseHeaders);
-        this.contentType = contentType;
-        this.responseBodyExcerpt = responseBodyExcerpt;
     }
 
     public String operation() {
-        return operation;
+        return diagnostics.operation();
     }
 
     public int statusCode() {
-        return statusCode;
+        return diagnostics.statusCode();
     }
 
     public Map<String, List<String>> responseHeaders() {
@@ -39,11 +34,11 @@ public final class MemoryServiceException extends MemoryClientException {
     }
 
     public String contentType() {
-        return contentType;
+        return diagnostics.contentType();
     }
 
     public String responseBodyExcerpt() {
-        return responseBodyExcerpt;
+        return diagnostics.responseBodyExcerpt();
     }
 
     private static Map<String, List<String>> immutableHeaders(

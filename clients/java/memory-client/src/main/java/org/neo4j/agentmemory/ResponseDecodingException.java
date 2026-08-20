@@ -1,10 +1,7 @@
 package org.neo4j.agentmemory;
 
 public final class ResponseDecodingException extends MemoryClientException {
-    private final String operation;
-    private final int statusCode;
-    private final String contentType;
-    private final String responseBodyExcerpt;
+    private final ResponseDiagnostics diagnostics;
 
     public ResponseDecodingException(
             String operation,
@@ -13,25 +10,23 @@ public final class ResponseDecodingException extends MemoryClientException {
             String responseBodyExcerpt,
             Throwable cause) {
         super(operation + " could not decode HTTP " + statusCode + " response", cause);
-        this.operation = operation;
-        this.statusCode = statusCode;
-        this.contentType = contentType;
-        this.responseBodyExcerpt = responseBodyExcerpt;
+        this.diagnostics = new ResponseDiagnostics(
+                operation, statusCode, contentType, responseBodyExcerpt);
     }
 
     public String operation() {
-        return operation;
+        return diagnostics.operation();
     }
 
     public int statusCode() {
-        return statusCode;
+        return diagnostics.statusCode();
     }
 
     public String contentType() {
-        return contentType;
+        return diagnostics.contentType();
     }
 
     public String responseBodyExcerpt() {
-        return responseBodyExcerpt;
+        return diagnostics.responseBodyExcerpt();
     }
 }
