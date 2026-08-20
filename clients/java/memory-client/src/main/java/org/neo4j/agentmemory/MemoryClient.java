@@ -2,6 +2,7 @@ package org.neo4j.agentmemory;
 
 import java.net.URI;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 public interface MemoryClient {
@@ -19,4 +20,6 @@ public interface MemoryClient {
     CompletableFuture<Conversation> createConversation(CreateConversation request);
 
     CompletableFuture<List<Conversation>> listConversations(ListConversations request);
+
+    CompletableFuture<Conversation> getConversation(UUID conversationId);
 }
