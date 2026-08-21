@@ -18,7 +18,6 @@ import org.neo4j.agentmemory.CreateConversation;
 import org.neo4j.agentmemory.ListConversations;
 import org.neo4j.agentmemory.MemoryClient;
 import org.neo4j.agentmemory.Message;
-import org.neo4j.agentmemory.NewMessage;
 import org.neo4j.agentmemory.e2e.assertions.ConversationAssert;
 import org.neo4j.agentmemory.e2e.assertions.ConversationContextAssert;
 import org.neo4j.agentmemory.e2e.assertions.MessageAssert;
@@ -60,7 +59,7 @@ class HostedServiceIT {
                                 .hasId()
                                 .hasUserId(userId);
 
-                var conversations = client.listConversations(new ListConversations(userId, 200)).join();
+                var conversations = client.listConversations(new ListConversations(200)).join();
 
                 assertThat(conversations)
                                 .extracting(Conversation::id)

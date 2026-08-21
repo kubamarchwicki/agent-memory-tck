@@ -4,7 +4,6 @@ import static java.net.http.HttpResponse.BodyHandlers.ofByteArray;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 import java.net.URI;
-import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -52,9 +51,6 @@ final class JdkMemoryClient implements MemoryClient {
     @Override
     public CompletableFuture<List<Conversation>> listConversations(ListConversations request) {
         var path = new StringBuilder("/conversations?limit=").append(request.limit());
-        if (request.userId() != null) {
-            path.append("&user_id=").append(URLEncoder.encode(request.userId(), UTF_8));
-        }
         return get(
                 "listConversations",
                 path.toString(),
