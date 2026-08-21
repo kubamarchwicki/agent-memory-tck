@@ -7,6 +7,8 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.UUID;
@@ -126,6 +128,61 @@ final class JdkMemoryClient implements MemoryClient {
                 response -> response);
     }
 
+    CompletableFuture<ReasoningStep> recordStep(
+            UUID conversationId, NewReasoningStep step) {
+        var body = new LinkedHashMap<String, Object>();
+        body.put("conversationId", conversationId);
+        body.put("reasoning", step.reasoning());
+        body.put("actionTaken", step.actionTaken());
+        step.result().ifPresent(result -> body.put("result", result));
+        return post(
+                "recordStep",
+                "/reasoning/steps",
+                body,
+                RecordReasoningStepResponse.class,
+                this::recordedReasoningStep);
+    }
+
+    CompletableFuture<ToolCall> recordToolCall(UUID stepId, NewToolCall call) {
+        var body = new LinkedHashMap<String, Object>();
+        body.put("stepId", stepId);
+        body.put("toolName", call.toolName());
+        body.put("input", call.input());
+        body.put("status", call.status());
+        call.output().ifPresent(output -> body.put("output", output));
+        call.duration().ifPresent(duration -> body.put("durationMs", duration.toMillis()));
+        return post(
+                "recordToolCall",
+                "/reasoning/tool-calls",
+                body,
+                RecordToolCallResponse.class,
+                response -> new ToolCall(
+                        response.id(),
+                        response.stepId(),
+                        response.toolName(),
+                        call.input(),
+                        call.output().orElse(null),
+                        response.status(),
+                        call.duration().orElse(null),
+                        null));
+    }
+
+    CompletableFuture<ReasoningTrace> trace(UUID conversationId) {
+        return get(
+                "trace",
+                "/reasoning/trace/" + conversationId,
+                ReasoningTraceResponse.class,
+                response -> reasoningTrace(conversationId, response));
+    }
+
+    CompletableFuture<ReasoningStepExplanation> explainReasoningStep(UUID stepId) {
+        return get(
+                "explainReasoningStep",
+                "/reasoning/explain/" + stepId,
+                ReasoningStepExplanationResponse.class,
+                this::reasoningStepExplanation);
+    }
+
     CompletableFuture<Void> deleteConversation(UUID conversationId) {
         var operation = "deleteConversation";
         var request = request("/conversations/" + conversationId)
@@ -233,6 +290,76 @@ final class JdkMemoryClient implements MemoryClient {
                 response.description());
     }
 
+    private ReasoningStep recordedReasoningStep(RecordReasoningStepResponse response) {
+        return new ReasoningStep(
+                this,
+                response.id(),
+                response.conversationId(),
+                response.reasoning(),
+                response.actionTaken(),
+                response.result(),
+                null);
+    }
+
+    private ReasoningTrace reasoningTrace(
+            UUID requestedConversationId, ReasoningTraceResponse response) {
+        var conversationId = response.conversationId() == null
+                ? requestedConversationId
+                : response.conversationId();
+        var steps = nullToEmpty(response.steps()).stream()
+                .map(step -> new ReasoningStep(
+                        this,
+                        step.id(),
+                        conversationId,
+                        step.reasoning(),
+                        step.actionTaken(),
+                        step.result(),
+                        instant(step.createdAt())))
+                .toList();
+        var toolCalls = nullToEmpty(response.toolCalls()).stream()
+                .map(this::toolCall)
+                .toList();
+        return new ReasoningTrace(conversationId, steps, toolCalls);
+    }
+
+    private ReasoningStepExplanation reasoningStepExplanation(
+            ReasoningStepExplanationResponse response) {
+        var step = new ReasoningStep(
+                this,
+                response.id(),
+                response.conversationId(),
+                response.reasoning(),
+                response.actionTaken(),
+                response.result(),
+                instant(response.createdAt()));
+        var calls = nullToEmpty(response.toolCalls()).stream()
+                .map(this::toolCall)
+                .toList();
+        var entities = nullToEmpty(response.influencedEntities()).stream()
+                .map(entity -> new Entity(
+                        entity.id(), entity.name(), entity.type(), (String) null))
+                .toList();
+        return new ReasoningStepExplanation(step, calls, entities);
+    }
+
+    private ToolCall toolCall(ToolCallResponse response) {
+        return new ToolCall(
+                response.id(),
+                response.stepId(),
+                response.toolName(),
+                response.input(),
+                response.output(),
+                response.status(),
+                response.durationMs() == null
+                        ? null
+                        : Duration.ofMillis(response.durationMs()),
+                instant(response.createdAt()));
+    }
+
+    private static Instant instant(String value) {
+        return value == null || value.isBlank() ? null : Instant.parse(value);
+    }
+
     private static <T> List<T> nullToEmpty(List<T> values) {
         return values == null ? List.of() : values;
     }
@@ -273,4 +400,54 @@ final class JdkMemoryClient implements MemoryClient {
     private record EntitiesResponse(
             List<EntityResponse> entities,
             String searchType) {}
+
+    private record RecordReasoningStepResponse(
+            UUID id,
+            UUID conversationId,
+            String reasoning,
+            String actionTaken,
+            String result) {}
+
+    private record ReasoningStepResponse(
+            UUID id,
+            String reasoning,
+            String actionTaken,
+            String result,
+            String createdAt) {}
+
+    private record RecordToolCallResponse(
+            UUID id,
+            UUID stepId,
+            String toolName,
+            ToolCallStatus status) {}
+
+    private record ToolCallResponse(
+            UUID id,
+            UUID stepId,
+            String toolName,
+            String input,
+            String output,
+            ToolCallStatus status,
+            Long durationMs,
+            String createdAt) {}
+
+    private record ReasoningTraceResponse(
+            UUID conversationId,
+            List<ReasoningStepResponse> steps,
+            List<ToolCallResponse> toolCalls) {}
+
+    private record InfluencedEntityResponse(
+            UUID id,
+            String name,
+            String type) {}
+
+    private record ReasoningStepExplanationResponse(
+            UUID id,
+            UUID conversationId,
+            String reasoning,
+            String actionTaken,
+            String result,
+            String createdAt,
+            List<ToolCallResponse> toolCalls,
+            List<InfluencedEntityResponse> influencedEntities) {}
 }

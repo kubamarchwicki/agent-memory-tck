@@ -43,6 +43,14 @@ public final class Conversation {
         return client.context(id);
     }
 
+    public CompletableFuture<ReasoningStep> recordStep(NewReasoningStep step) {
+        return client.recordStep(id, step);
+    }
+
+    public CompletableFuture<ReasoningTrace> trace() {
+        return client.trace(id);
+    }
+
     public CompletableFuture<Void> delete() {
         return client.deleteConversation(id);
     }
