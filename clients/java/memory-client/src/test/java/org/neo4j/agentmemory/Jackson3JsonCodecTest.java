@@ -99,5 +99,21 @@ class Jackson3JsonCodecTest {
                 .isInstanceOf(JsonCodecException.class).hasMessage("Could not decode JSON");
     }
 
+    @Test
+    void encodesAndDecodesHostedToolCallStatuses() {
+        var encoded = new String(
+                codec.encode(new ToolStatusFixture(ToolCallStatus.SUCCESS)), UTF_8);
+
+        assertThat(encoded).isEqualTo("{\"status\":\"success\"}");
+
+        var decoded = codec.decode(
+                "{\"status\":\"timeout\"}".getBytes(UTF_8),
+                ToolStatusFixture.class);
+
+        assertThat(decoded.status()).isEqualTo(ToolCallStatus.TIMEOUT);
+    }
+
     private record ConversationFixture(UUID id, String userId) {}
+
+    private record ToolStatusFixture(ToolCallStatus status) {}
 }
