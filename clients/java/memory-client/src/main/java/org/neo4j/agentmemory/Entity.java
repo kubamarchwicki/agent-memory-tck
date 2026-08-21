@@ -8,7 +8,7 @@ public record Entity(
         String name,
         String type,
         Optional<String> description) {
-    Entity(UUID id, String name, String type, String description) {
+    public Entity(UUID id, String name, String type, String description) {
         this(id, name, type, Optional.ofNullable(description));
     }
 
