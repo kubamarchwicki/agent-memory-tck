@@ -3,12 +3,14 @@ package org.neo4j.agentmemory.e2e;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assumptions.assumeFalse;
 import static org.neo4j.agentmemory.NewMessage.user;
 import static org.neo4j.agentmemory.NewMessage.assistant;
 import static org.neo4j.agentmemory.MessageRole.ASSISTANT;
 import static org.neo4j.agentmemory.MessageRole.USER;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -19,6 +21,9 @@ import org.neo4j.agentmemory.CreateConversation;
 import org.neo4j.agentmemory.ListConversations;
 import org.neo4j.agentmemory.MemoryClient;
 import org.neo4j.agentmemory.Message;
+import org.neo4j.agentmemory.NewReasoningStep;
+import org.neo4j.agentmemory.NewToolCall;
+import org.neo4j.agentmemory.ToolCallStatus;
 import org.neo4j.agentmemory.e2e.assertions.ConversationAssert;
 import org.neo4j.agentmemory.e2e.assertions.ConversationContextAssert;
 import org.neo4j.agentmemory.e2e.assertions.MessageAssert;
@@ -123,6 +128,77 @@ class HostedServiceIT {
                 var created = client.createConversation(new CreateConversation(uniqueUserId())).join();
 
                 assertThatCode(() -> created.delete().join()).doesNotThrowAnyException();
+        }
+
+        @Test
+        void supportsMemorySkillPrimitivesAndReasoningTrace() {
+                var marker = UUID.randomUUID().toString();
+                var client = client();
+                var conversation = client.createConversation(new CreateConversation()).join();
+
+                assertThat(conversation.userId()).isEmpty();
+
+                var priorEntities = client.searchEntities(marker).join();
+                assertThatThrownBy(priorEntities::clear)
+                                .isInstanceOf(UnsupportedOperationException.class);
+
+                var firstUser = conversation
+                                .addMessages(List.of(user("first user " + marker)))
+                                .join()
+                                .get(0);
+                var firstAssistant = conversation
+                                .addMessage(assistant("first assistant " + marker))
+                                .join();
+                var exchange = conversation
+                                .addMessages(List.of(
+                                                user("next user " + marker),
+                                                assistant("next assistant " + marker)))
+                                .join();
+
+                assertThat(exchange)
+                                .extracting(Message::role)
+                                .containsExactly(USER, ASSISTANT);
+
+                var step = conversation
+                                .recordStep(new NewReasoningStep(
+                                                "Application supplied reasoning " + marker,
+                                                "Search prior entities",
+                                                "Search completed"))
+                                .join();
+
+                var call = step.recordToolCall(NewToolCall
+                                .builder(
+                                                "memory_search_entities",
+                                                "{\"query\":\"" + marker + "\"}")
+                                .output("{\"entities\":[]}")
+                                .status(ToolCallStatus.SUCCESS)
+                                .duration(Duration.ofMillis(25))
+                                .build())
+                                .join();
+
+                assertThat(call.stepId()).isEqualTo(step.id());
+                assertThat(call.input()).contains(marker);
+                assertThat(call.duration()).contains(Duration.ofMillis(25));
+
+                var trace = conversation.trace().join();
+
+                assertThat(trace.conversationId()).isEqualTo(conversation.id());
+                assertThat(trace.steps()).contains(step);
+                assertThat(trace.toolCalls(step)).contains(call);
+
+                var explanation = step.explanation().join();
+
+                assertThat(explanation.step()).isEqualTo(step);
+                assertThat(explanation.toolCalls()).contains(call);
+                assertThat(explanation.influencedEntities()).isNotNull();
+
+                assertThat(conversation.messages().join())
+                                .extracting(Message::id)
+                                .contains(
+                                                firstUser.id(),
+                                                firstAssistant.id(),
+                                                exchange.get(0).id(),
+                                                exchange.get(1).id());
         }
 
         private static MemoryClient client() {
