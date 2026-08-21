@@ -1,6 +1,7 @@
 package org.neo4j.agentmemory.e2e.assertions;
 
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 import org.assertj.core.api.AbstractAssert;
 import org.neo4j.agentmemory.Conversation;
@@ -32,8 +33,11 @@ public final class ConversationAssert extends AbstractAssert<ConversationAssert,
 
     public ConversationAssert hasUserId(String expected) {
         isNotNull();
-        if (!Objects.equals(actual.userId(), expected)) {
-            failWithMessage("Expected conversation user id <%s> but was <%s>", expected, actual.userId());
+        if (!actual.userId().equals(Optional.ofNullable(expected))) {
+            failWithMessage(
+                    "Expected conversation user id <%s> but was <%s>",
+                    expected,
+                    actual.userId().orElse(null));
         }
         return this;
     }

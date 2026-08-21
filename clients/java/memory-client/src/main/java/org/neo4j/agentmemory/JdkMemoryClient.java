@@ -7,6 +7,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -40,10 +41,12 @@ final class JdkMemoryClient implements MemoryClient {
 
     @Override
     public CompletableFuture<Conversation> createConversation(CreateConversation request) {
+        var body = new LinkedHashMap<String, Object>();
+        request.userId().ifPresent(userId -> body.put("userId", userId));
         return post(
                 "createConversation",
                 "/conversations",
-                request,
+                body,
                 ConversationResponse.class,
                 this::conversation);
     }

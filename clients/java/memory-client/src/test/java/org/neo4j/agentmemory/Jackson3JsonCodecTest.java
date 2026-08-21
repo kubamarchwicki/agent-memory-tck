@@ -17,11 +17,9 @@ class Jackson3JsonCodecTest {
     private final JsonCodec codec = new Jackson3JsonCodec();
 
     @Test
-    void encodesHostedRequestRecordsAndLowercaseRole() {
-        var createJson = new String(codec.encode(new CreateConversation("alice")), UTF_8);
+    void encodesHostedMessageRequestAndLowercaseRole() {
         var messageJson = new String(codec.encode(new NewMessage(USER, "hello")), UTF_8);
 
-        assertThat(createJson).isEqualTo("{\"userId\":\"alice\"}");
         assertThat(messageJson).isEqualTo("{\"role\":\"user\",\"content\":\"hello\"}");
     }
 
