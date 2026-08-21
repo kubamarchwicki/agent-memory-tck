@@ -23,4 +23,10 @@ public interface MemoryClient {
     CompletableFuture<List<Conversation>> listConversations(ListConversations request);
 
     CompletableFuture<Conversation> getConversation(UUID conversationId);
+
+    default CompletableFuture<List<Entity>> searchEntities(String query) {
+        return searchEntities(new EntitySearch(query));
+    }
+
+    CompletableFuture<List<Entity>> searchEntities(EntitySearch search);
 }

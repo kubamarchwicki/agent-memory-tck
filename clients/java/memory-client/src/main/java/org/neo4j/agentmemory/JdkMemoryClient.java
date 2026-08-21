@@ -72,6 +72,24 @@ final class JdkMemoryClient implements MemoryClient {
                 this::conversation);
     }
 
+    @Override
+    public CompletableFuture<List<Entity>> searchEntities(EntitySearch search) {
+        var body = new LinkedHashMap<String, Object>();
+        body.put("query", search.query());
+        body.put("limit", search.limit());
+        if (search.type() != null) {
+            body.put("type", search.type());
+        }
+        return post(
+                "searchEntities",
+                "/entities/search",
+                body,
+                EntitiesResponse.class,
+                response -> nullToEmpty(response.entities()).stream()
+                        .map(this::entity)
+                        .toList());
+    }
+
     CompletableFuture<Message> addMessage(UUID conversationId, NewMessage message) {
         return post(
                 "addMessage",
@@ -196,6 +214,14 @@ final class JdkMemoryClient implements MemoryClient {
         return new Conversation(this, response.id(), response.userId());
     }
 
+    private Entity entity(EntityResponse response) {
+        return new Entity(
+                response.id(),
+                response.name(),
+                response.type(),
+                response.description());
+    }
+
     private static <T> List<T> nullToEmpty(List<T> values) {
         return values == null ? List.of() : values;
     }
@@ -224,4 +250,14 @@ final class JdkMemoryClient implements MemoryClient {
     private record ConversationsResponse(List<ConversationResponse> conversations) {}
 
     private record MessagesResponse(List<Message> messages) {}
+
+    private record EntityResponse(
+            UUID id,
+            String name,
+            String type,
+            String description) {}
+
+    private record EntitiesResponse(
+            List<EntityResponse> entities,
+            String searchType) {}
 }
