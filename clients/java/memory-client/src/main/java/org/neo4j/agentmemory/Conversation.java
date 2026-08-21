@@ -31,6 +31,10 @@ public final class Conversation {
         return client.addMessage(id, message);
     }
 
+    public CompletableFuture<List<Message>> addMessages(List<NewMessage> messages) {
+        return client.addMessages(id, messages);
+    }
+
     public CompletableFuture<List<Message>> messages() {
         return client.messages(id);
     }

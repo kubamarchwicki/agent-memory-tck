@@ -99,6 +99,17 @@ final class JdkMemoryClient implements MemoryClient {
                 response -> response);
     }
 
+    CompletableFuture<List<Message>> addMessages(
+            UUID conversationId, List<NewMessage> messages) {
+        var snapshot = List.copyOf(messages);
+        return post(
+                "addMessages",
+                "/conversations/" + conversationId + "/messages/bulk",
+                new AddMessagesRequest(snapshot),
+                MessagesResponse.class,
+                response -> List.copyOf(nullToEmpty(response.messages())));
+    }
+
     CompletableFuture<List<Message>> messages(UUID conversationId) {
         return get(
                 "messages",
@@ -250,6 +261,8 @@ final class JdkMemoryClient implements MemoryClient {
     private record ConversationsResponse(List<ConversationResponse> conversations) {}
 
     private record MessagesResponse(List<Message> messages) {}
+
+    private record AddMessagesRequest(List<NewMessage> messages) {}
 
     private record EntityResponse(
             UUID id,

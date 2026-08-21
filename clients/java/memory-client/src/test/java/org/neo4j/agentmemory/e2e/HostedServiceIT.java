@@ -9,6 +9,7 @@ import static org.neo4j.agentmemory.NewMessage.assistant;
 import static org.neo4j.agentmemory.MessageRole.ASSISTANT;
 import static org.neo4j.agentmemory.MessageRole.USER;
 
+import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -79,31 +80,41 @@ class HostedServiceIT {
                                 .hasId(created.id())
                                 .hasUserId(userId);
 
-                var userMessage = conversation
-                                .addMessage(user("java e2e user " + marker))
-                                .join();
-                var assistantMessage = conversation
+                var firstUser = conversation
+                                .addMessages(List.of(user("java e2e user " + marker)))
+                                .join()
+                                .get(0);
+                var firstAssistant = conversation
                                 .addMessage(assistant("java e2e assistant " + marker))
                                 .join();
+                var exchange = conversation
+                                .addMessages(List.of(
+                                                user("java e2e follow-up user " + marker),
+                                                assistant("java e2e follow-up assistant " + marker)))
+                                .join();
 
-                MessageAssert.assertThat(userMessage)
+                assertThat(exchange)
+                                .extracting(Message::role)
+                                .containsExactly(USER, ASSISTANT);
+
+                MessageAssert.assertThat(firstUser)
                                 .hasId()
                                 .hasRole(USER)
                                 .hasContent("java e2e user " + marker);
-                MessageAssert.assertThat(assistantMessage)
+                MessageAssert.assertThat(firstAssistant)
                                 .hasId()
                                 .hasRole(ASSISTANT)
                                 .hasContent("java e2e assistant " + marker);
 
                 assertThat(conversation.messages().join())
                                 .extracting(Message::id)
-                                .contains(userMessage.id(), assistantMessage.id());
+                                .contains(firstUser.id(), firstAssistant.id());
 
                 var context = conversation.context().join();
 
                 ConversationContextAssert.assertThat(context)
                                 .hasThreeTiers()
-                                .containsRecentMessages(userMessage.id(), assistantMessage.id());
+                                .containsRecentMessages(firstUser.id(), firstAssistant.id());
         }
 
         @Test
