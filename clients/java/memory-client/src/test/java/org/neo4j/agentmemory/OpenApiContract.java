@@ -26,7 +26,7 @@ final class OpenApiContract {
     private static final String TIMESTAMP = Instant.parse("2026-08-26T09:15:30Z").toString();
     private static final int MAX_DEPTH = 8;
     private static final OpenApiInteractionValidator VALIDATOR =
-            OpenApiInteractionValidator.createFor(SPEC_JSON).build();
+            OpenApiInteractionValidator.createForInlineApiSpecification(SPEC_JSON).build();
 
     private OpenApiContract() {}
 
