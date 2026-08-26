@@ -20,6 +20,7 @@
         <junit.version>5.14.4</junit.version>
         <maven-failsafe-plugin.version>3.5.6</maven-failsafe-plugin.version>
         <slf4j.version>2.0.17</slf4j.version>
+        <swagger-request-validator.version>2.46.1</swagger-request-validator.version>
         <wiremock.version>3.13.2</wiremock.version>
     </properties>
 
@@ -29,6 +30,18 @@
             <artifactId>jackson-databind</artifactId>
             <version>${jackson.version}</version>
             <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>com.atlassian.oai</groupId>
+            <artifactId>swagger-request-validator-wiremock-junit5</artifactId>
+            <version>${swagger-request-validator.version}</version>
+            <scope>test</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>com.github.tomakehurst</groupId>
+                    <artifactId>wiremock-jre8</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.assertj</groupId>
@@ -57,6 +70,17 @@
     </dependencies>
 
     <build>
+        <testResources>
+            <testResource>
+                <directory>src/test/resources</directory>
+            </testResource>
+            <testResource>
+                <directory>../docs</directory>
+                <includes>
+                    <include>openapi.json</include>
+                </includes>
+            </testResource>
+        </testResources>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
