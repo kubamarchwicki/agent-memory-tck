@@ -44,7 +44,7 @@ final class JdkMemoryClient implements MemoryClient {
     @Override
     public CompletableFuture<Conversation> createConversation(CreateConversation request) {
         var body = new LinkedHashMap<String, Object>();
-        request.userId().ifPresent(userId -> body.put("userId", userId));
+        request.getUserId().ifPresent(userId -> body.put("userId", userId));
         return post(
                 "createConversation",
                 "/conversations",
@@ -134,7 +134,7 @@ final class JdkMemoryClient implements MemoryClient {
         body.put("conversationId", conversationId);
         body.put("reasoning", step.reasoning());
         body.put("actionTaken", step.actionTaken());
-        step.result().ifPresent(result -> body.put("result", result));
+        step.getResult().ifPresent(result -> body.put("result", result));
         return post(
                 "recordStep",
                 "/reasoning/steps",
@@ -149,8 +149,8 @@ final class JdkMemoryClient implements MemoryClient {
         body.put("toolName", call.toolName());
         body.put("input", call.input());
         body.put("status", call.status());
-        call.output().ifPresent(output -> body.put("output", output));
-        call.duration().ifPresent(duration -> body.put("durationMs", duration.toMillis()));
+        call.getOutput().ifPresent(output -> body.put("output", output));
+        call.getDuration().ifPresent(duration -> body.put("durationMs", duration.toMillis()));
         return post(
                 "recordToolCall",
                 "/reasoning/tool-calls",
@@ -161,9 +161,9 @@ final class JdkMemoryClient implements MemoryClient {
                         response.stepId(),
                         response.toolName(),
                         call.input(),
-                        call.output().orElse(null),
+                        call.output(),
                         response.status(),
-                        call.duration().orElse(null),
+                        call.duration(),
                         null));
     }
 

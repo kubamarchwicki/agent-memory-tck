@@ -14,10 +14,17 @@ class ConversationIdentityTest {
     @Test
     void representsKnownAndUnknownConversationUsersExplicitly() {
         assertThat(CreateConversation.class.isRecord()).isTrue();
-        assertThat(new CreateConversation().userId()).isEmpty();
-        assertThat(new CreateConversation((String) null).userId()).isEmpty();
-        assertThat(new CreateConversation(" \t").userId()).isEmpty();
-        assertThat(new CreateConversation("alice").userId()).contains("alice");
+        var absent = new CreateConversation();
+        var explicitNull = new CreateConversation((String) null);
+        var blank = new CreateConversation(" \t");
+        var known = new CreateConversation(" alice ");
+
+        assertThat(absent.userId()).isNull();
+        assertThat(explicitNull.userId()).isNull();
+        assertThat(blank.userId()).isNull();
+        assertThat(known.userId()).isEqualTo("alice");
+        assertThat(absent.getUserId()).isEmpty();
+        assertThat(known.getUserId()).contains("alice");
     }
 
     @Test

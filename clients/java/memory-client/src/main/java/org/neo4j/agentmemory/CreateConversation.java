@@ -2,18 +2,21 @@ package org.neo4j.agentmemory;
 
 import java.util.Optional;
 
-public record CreateConversation(Optional<String> userId) {
+public record CreateConversation(String userId) {
     public CreateConversation() {
-        this(Optional.empty());
-    }
-
-    public CreateConversation(String userId) {
-        this(Optional.ofNullable(userId));
+        this((String) null);
     }
 
     public CreateConversation {
-        userId = (userId == null ? Optional.<String>empty() : userId)
-                .map(String::trim)
-                .filter(value -> !value.isEmpty());
+        if (userId != null) {
+            userId = userId.trim();
+            if (userId.isEmpty()) {
+                userId = null;
+            }
+        }
+    }
+
+    public Optional<String> getUserId() {
+        return Optional.ofNullable(userId);
     }
 }

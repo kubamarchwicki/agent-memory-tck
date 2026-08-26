@@ -25,7 +25,8 @@ class EntitySearchTest {
 
         assertThat(Entity.class.isRecord()).isTrue();
         assertThat(entity.type()).isEqualTo("future-type");
-        assertThat(entity.description()).isEmpty();
+        assertThat(entity.description()).isNull();
+        assertThat(entity.getDescription()).isEmpty();
     }
 
     @Test

@@ -7,21 +7,24 @@ import java.util.Optional;
 public record NewToolCall(
         String toolName,
         String input,
-        Optional<String> output,
+        String output,
         ToolCallStatus status,
-        Optional<Duration> duration) {
+        Duration duration) {
     private NewToolCall(Builder builder) {
         this(
                 builder.toolName,
                 builder.input,
-                Optional.ofNullable(builder.output),
+                builder.output,
                 builder.status,
-                Optional.ofNullable(builder.duration));
+                builder.duration);
     }
 
-    public NewToolCall {
-        output = output == null ? Optional.empty() : output;
-        duration = duration == null ? Optional.empty() : duration;
+    public Optional<String> getOutput() {
+        return Optional.ofNullable(output);
+    }
+
+    public Optional<Duration> getDuration() {
+        return Optional.ofNullable(duration);
     }
 
     public static Builder builder(String toolName, String input) {

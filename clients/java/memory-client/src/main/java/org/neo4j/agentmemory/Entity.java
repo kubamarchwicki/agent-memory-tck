@@ -7,13 +7,9 @@ public record Entity(
         UUID id,
         String name,
         String type,
-        Optional<String> description) {
-    public Entity(UUID id, String name, String type, String description) {
-        this(id, name, type, Optional.ofNullable(description));
-    }
-
-    public Entity {
-        description = description == null ? Optional.empty() : description;
+        String description) {
+    public Optional<String> getDescription() {
+        return Optional.ofNullable(description);
     }
 
     @Override

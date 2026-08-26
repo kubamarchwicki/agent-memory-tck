@@ -178,7 +178,8 @@ class HostedServiceIT {
 
                 assertThat(call.stepId()).isEqualTo(step.id());
                 assertThat(call.input()).contains(marker);
-                assertThat(call.duration()).contains(Duration.ofMillis(25));
+                assertThat(call.duration()).isEqualTo(Duration.ofMillis(25));
+                assertThat(call.getDuration()).contains(Duration.ofMillis(25));
 
                 var trace = conversation.trace().join();
 

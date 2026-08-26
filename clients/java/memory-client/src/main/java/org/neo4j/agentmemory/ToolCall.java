@@ -10,34 +10,20 @@ public record ToolCall(
         UUID stepId,
         String toolName,
         String input,
-        Optional<String> output,
+        String output,
         ToolCallStatus status,
-        Optional<Duration> duration,
-        Optional<Instant> createdAt) {
-    public ToolCall(
-            UUID id,
-            UUID stepId,
-            String toolName,
-            String input,
-            String output,
-            ToolCallStatus status,
-            Duration duration,
-            Instant createdAt) {
-        this(
-                id,
-                stepId,
-                toolName,
-                input,
-                Optional.ofNullable(output),
-                status,
-                Optional.ofNullable(duration),
-                Optional.ofNullable(createdAt));
+        Duration duration,
+        Instant createdAt) {
+    public Optional<String> getOutput() {
+        return Optional.ofNullable(output);
     }
 
-    public ToolCall {
-        output = output == null ? Optional.empty() : output;
-        duration = duration == null ? Optional.empty() : duration;
-        createdAt = createdAt == null ? Optional.empty() : createdAt;
+    public Optional<Duration> getDuration() {
+        return Optional.ofNullable(duration);
+    }
+
+    public Optional<Instant> getCreatedAt() {
+        return Optional.ofNullable(createdAt);
     }
 
     @Override

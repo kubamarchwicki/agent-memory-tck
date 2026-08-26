@@ -5,16 +5,12 @@ import java.util.Optional;
 public record NewReasoningStep(
         String reasoning,
         String actionTaken,
-        Optional<String> result) {
+        String result) {
     public NewReasoningStep(String reasoning, String actionTaken) {
-        this(reasoning, actionTaken, Optional.empty());
+        this(reasoning, actionTaken, null);
     }
 
-    public NewReasoningStep(String reasoning, String actionTaken, String result) {
-        this(reasoning, actionTaken, Optional.ofNullable(result));
-    }
-
-    public NewReasoningStep {
-        result = result == null ? Optional.empty() : result;
+    public Optional<String> getResult() {
+        return Optional.ofNullable(result);
     }
 }
