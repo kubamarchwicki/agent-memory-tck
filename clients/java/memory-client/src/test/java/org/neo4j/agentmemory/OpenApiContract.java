@@ -4,6 +4,8 @@ import static com.github.tomakehurst.wiremock.client.WireMock.getAllServeEvents;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
 
+import com.atlassian.oai.validator.OpenApiInteractionValidator;
+import com.atlassian.oai.validator.wiremock.junit5.WireMockRequestResponseUtil;
 import com.github.tomakehurst.wiremock.client.ResponseDefinitionBuilder;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import java.io.IOException;
@@ -23,6 +25,8 @@ final class OpenApiContract {
     private static final JsonNode SPEC = MAPPER.readTree(SPEC_JSON);
     private static final String TIMESTAMP = Instant.parse("2026-08-26T09:15:30Z").toString();
     private static final int MAX_DEPTH = 8;
+    private static final OpenApiInteractionValidator VALIDATOR =
+            OpenApiInteractionValidator.createFor(SPEC_JSON).build();
 
     private OpenApiContract() {}
 
@@ -59,6 +63,24 @@ final class OpenApiContract {
             if (schema != null) {
                 assertDeclared(MAPPER.readTree(body), schema, request.getMethod() + " " + path);
             }
+        }
+    }
+
+    /**
+     * WireMock validates asynchronously via its post-serve-action hook, well after this
+     * assertion would run if it relied on that hook's accumulated report. Validate every
+     * recorded exchange directly and synchronously instead, so there is no timing dependency.
+     */
+    static void assertEveryExchangeMatchesTheContract() {
+        for (var event : getAllServeEvents()) {
+            var request = event.getRequest();
+            var report = VALIDATOR.validate(
+                    WireMockRequestResponseUtil.toRequest(request),
+                    WireMockRequestResponseUtil.toResponse(event.getResponse()));
+            assertThat(report.hasErrors())
+                    .as("%s %s violated the contract: %s",
+                            request.getMethod(), request.getUrl(), report.getMessages())
+                    .isFalse();
         }
     }
 

@@ -10,7 +10,6 @@ import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMoc
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 
-import com.atlassian.oai.validator.wiremock.junit5.OpenApiValidator;
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
 import java.net.URI;
 import java.time.Duration;
@@ -22,12 +21,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 class MemoryClientContractTest {
-    private static final OpenApiValidator VALIDATION =
-            new OpenApiValidator(OpenApiContract.spec());
-
     @RegisterExtension
     static final WireMockExtension WIRE_MOCK = WireMockExtension.newInstance()
-            .options(wireMockConfig().dynamicPort().extensions(VALIDATION))
+            .options(wireMockConfig().dynamicPort())
             .configureStaticDsl(true)
             .build();
 
@@ -35,7 +31,6 @@ class MemoryClientContractTest {
 
     @BeforeEach
     void startFromACleanContract() {
-        VALIDATION.reset();
         client = MemoryClient.create(
                 URI.create(WIRE_MOCK.baseUrl() + "/v1"), "nams_contract-test-key");
     }
@@ -43,7 +38,7 @@ class MemoryClientContractTest {
     @AfterEach
     void everyExchangeHonouredTheContract() {
         OpenApiContract.assertOnlyDeclaredRequestProperties();
-        VALIDATION.assertValidationPassed();
+        OpenApiContract.assertEveryExchangeMatchesTheContract();
     }
 
     @Test
