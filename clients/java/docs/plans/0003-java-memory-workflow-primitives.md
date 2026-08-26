@@ -1,5 +1,7 @@
 # Java Memory Workflow Primitives Implementation Plan
 
+> Historical implementation plan: its `Optional` record-component decision is superseded by [ADR 0012](../adr/0012-store-nullable-domain-state-directly.md) and plan 0004. The remaining steps document the implementation as originally executed.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use subagent-driven-development to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Extend the Java client with the NAMS primitives required for memory-skill steps 1–4 and 7: optional-user conversation creation, entity search, bulk messages, reasoning steps, tool calls, traces, and explanations.
