@@ -9,14 +9,12 @@ import java.util.concurrent.CompletableFuture;
 public final class Conversation {
     private final JdkMemoryClient client;
     private final UUID id;
-    private final Optional<String> userId;
+    private final String userId;
 
     Conversation(JdkMemoryClient client, UUID id, String userId) {
         this.client = client;
         this.id = id;
-        this.userId = Optional.ofNullable(userId)
-                .map(String::trim)
-                .filter(value -> !value.isEmpty());
+        this.userId = normalizeUserId(userId);
     }
 
     public UUID id() {
@@ -24,7 +22,15 @@ public final class Conversation {
     }
 
     public Optional<String> userId() {
-        return userId;
+        return Optional.ofNullable(userId);
+    }
+
+    private static String normalizeUserId(String userId) {
+        if (userId == null) {
+            return null;
+        }
+        var normalized = userId.trim();
+        return normalized.isEmpty() ? null : normalized;
     }
 
     public CompletableFuture<Message> addMessage(NewMessage message) {

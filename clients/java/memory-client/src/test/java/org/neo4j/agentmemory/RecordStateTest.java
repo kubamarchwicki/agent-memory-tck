@@ -9,6 +9,17 @@ import org.junit.jupiter.api.Test;
 
 class RecordStateTest {
     @Test
+    void domainObjectsStoreNullableValuesRatherThanOptionalContainers() {
+        var storedTypes = List.of(Conversation.class, ReasoningStep.class).stream()
+                .flatMap(type -> Arrays.stream(type.getDeclaredFields()))
+                .filter(field -> !java.lang.reflect.Modifier.isStatic(field.getModifiers()))
+                .map(java.lang.reflect.Field::getType)
+                .toList();
+
+        assertThat(storedTypes).doesNotContain(Optional.class);
+    }
+
+    @Test
     void nullableRecordComponentsUseDomainTypesRatherThanOptional() {
         var records = List.of(
                 CreateConversation.class,

@@ -28,6 +28,8 @@ class ReasoningSnapshotsTest {
 
         source.clear();
 
+        assertThat(step.result()).isEmpty();
+        assertThat(step.createdAt()).isEmpty();
         assertThat(trace.steps()).containsExactly(step);
         assertThat(trace.toolCalls(step)).containsExactly(call);
         assertThatThrownBy(() -> trace.toolCalls().clear())

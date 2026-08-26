@@ -12,8 +12,8 @@ public final class ReasoningStep {
     private final UUID conversationId;
     private final String reasoning;
     private final String actionTaken;
-    private final Optional<String> result;
-    private final Optional<Instant> createdAt;
+    private final String result;
+    private final Instant createdAt;
 
     ReasoningStep(
             JdkMemoryClient client,
@@ -28,8 +28,8 @@ public final class ReasoningStep {
         this.conversationId = conversationId;
         this.reasoning = reasoning;
         this.actionTaken = actionTaken;
-        this.result = Optional.ofNullable(result);
-        this.createdAt = Optional.ofNullable(createdAt);
+        this.result = result;
+        this.createdAt = createdAt;
     }
 
     public UUID id() {
@@ -49,11 +49,11 @@ public final class ReasoningStep {
     }
 
     public Optional<String> result() {
-        return result;
+        return Optional.ofNullable(result);
     }
 
     public Optional<Instant> createdAt() {
-        return createdAt;
+        return Optional.ofNullable(createdAt);
     }
 
     public CompletableFuture<ToolCall> recordToolCall(NewToolCall call) {
