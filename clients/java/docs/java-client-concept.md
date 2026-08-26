@@ -204,6 +204,7 @@ The discussion has not yet selected:
 - Release, compatibility, and NAMS API-versioning policy
 - Detailed mappings to Spring AI or LangChain4j
 - Example applications
+- Whether `Conversation.messages()` should expose a caller-supplied limit. It currently sends none, so the hosted default of 50 silently caps the result. The contract states the range and default only in prose, with no `minimum`, `maximum` or `default` in the schema, so contract verification cannot detect it.
 
 These questions belong to the next design phase. They should be resolved only after the conceptual boundary above remains stable under further review.
 
