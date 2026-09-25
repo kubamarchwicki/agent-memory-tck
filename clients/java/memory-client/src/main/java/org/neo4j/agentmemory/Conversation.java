@@ -91,8 +91,23 @@ public final class Conversation {
         return client.addMessages(id, messages);
     }
 
+    /**
+     * Reads an immutable newest-first sequence in service order.
+     * Sends no limit; the documented service default is 50.
+     */
     public CompletableFuture<List<Message>> messages() {
         return client.messages(id);
+    }
+
+    /**
+     * Reads up to {@code limit} recent messages, newest first in service order.
+     * No reversal, sorting, deduplication, pagination or remote trimming is performed.
+     *
+     * @param limit number of messages, from 1 through 200 inclusive
+     * @throws IllegalArgumentException synchronously when limit is outside 1–200
+     */
+    public CompletableFuture<List<Message>> messages(int limit) {
+        return client.messages(id, limit);
     }
 
     public CompletableFuture<ConversationContext> context() {

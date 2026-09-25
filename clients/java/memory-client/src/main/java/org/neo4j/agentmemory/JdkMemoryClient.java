@@ -117,10 +117,18 @@ final class JdkMemoryClient implements MemoryClient {
     }
 
     CompletableFuture<List<Message>> messages(UUID conversationId) {
-        return get(
-                "messages",
-                "/conversations/" + conversationId + "/messages",
-                MessagesResponse.class,
+        return readMessages("/conversations/" + conversationId + "/messages");
+    }
+
+    CompletableFuture<List<Message>> messages(UUID conversationId, int limit) {
+        if (limit < 1 || limit > 200) {
+            throw new IllegalArgumentException("limit must be between 1 and 200");
+        }
+        return readMessages("/conversations/" + conversationId + "/messages?limit=" + limit);
+    }
+
+    private CompletableFuture<List<Message>> readMessages(String path) {
+        return get("messages", path, MessagesResponse.class,
                 response -> List.copyOf(nullToEmpty(response.messages())));
     }
 
