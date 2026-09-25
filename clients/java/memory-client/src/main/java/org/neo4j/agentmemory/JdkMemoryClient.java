@@ -46,6 +46,9 @@ final class JdkMemoryClient implements MemoryClient {
     public CompletableFuture<Conversation> createConversation(CreateConversation request) {
         var body = new LinkedHashMap<String, Object>();
         request.getUserId().ifPresent(userId -> body.put("userId", userId));
+        if (!request.metadata().isEmpty()) {
+            body.put("metadata", request.metadata());
+        }
         return post(
                 "createConversation",
                 "/conversations",

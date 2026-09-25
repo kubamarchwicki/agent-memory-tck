@@ -1,10 +1,16 @@
 package org.neo4j.agentmemory;
 
+import java.util.Map;
 import java.util.Optional;
 
-public record CreateConversation(String userId) {
+/** Creation input; null metadata becomes an immutable empty map, omitted on the wire. */
+public record CreateConversation(String userId, Map<String, String> metadata) {
     public CreateConversation() {
-        this((String) null);
+        this(null, null);
+    }
+
+    public CreateConversation(String userId) {
+        this(userId, null);
     }
 
     public CreateConversation {
@@ -14,9 +20,14 @@ public record CreateConversation(String userId) {
                 userId = null;
             }
         }
+        metadata = metadata == null ? Map.of() : Map.copyOf(metadata);
     }
 
     public Optional<String> getUserId() {
         return Optional.ofNullable(userId);
+    }
+
+    public Map<String, String> getMetadata() {
+        return metadata;
     }
 }

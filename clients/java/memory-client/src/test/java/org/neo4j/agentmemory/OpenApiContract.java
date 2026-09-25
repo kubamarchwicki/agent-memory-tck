@@ -97,12 +97,20 @@ final class OpenApiContract {
             return;
         }
         var properties = resolved.get("properties");
-        var declared = properties == null ? List.<String>of() : List.copyOf(properties.propertyNames());
+        var additional = resolved.get("additionalProperties");
         for (var entry : actual.properties()) {
-            assertThat(declared)
+            var child = properties == null ? null : properties.get(entry.getKey());
+            if (child != null) {
+                assertDeclared(entry.getValue(), child, where + "." + entry.getKey());
+                continue;
+            }
+            assertThat(additional != null
+                            && (additional.isObject() || (additional.isBoolean() && additional.asBoolean())))
                     .as("%s sends undeclared property '%s'", where, entry.getKey())
-                    .contains(entry.getKey());
-            assertDeclared(entry.getValue(), properties.get(entry.getKey()), where);
+                    .isTrue();
+            if (additional.isObject()) {
+                assertDeclared(entry.getValue(), additional, where + "." + entry.getKey());
+            }
         }
     }
 

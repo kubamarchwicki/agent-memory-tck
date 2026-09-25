@@ -1,0 +1,73 @@
+package org.neo4j.agentmemory;
+
+import static com.github.tomakehurst.wiremock.client.WireMock.*;
+import static org.assertj.core.api.Assertions.*;
+
+import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
+import com.github.tomakehurst.wiremock.junit5.WireMockTest;
+import java.net.URI;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+
+@WireMockTest
+class CreateConversationMetadataTest {
+    private static final String PATH = "/v1/conversations";
+    private static final UUID ID = UUID.fromString("a2f55d70-838f-4c41-ae7d-dad30fd25720");
+
+    @AfterEach
+    void validateContract() {
+        OpenApiContract.assertOnlyDeclaredRequestProperties();
+        OpenApiContract.assertEveryExchangeMatchesTheContract();
+    }
+
+    @Test
+    void sendsExactTitleAndReturnsAssignedId(WireMockRuntimeInfo server) {
+        stubFor(post(urlEqualTo(PATH)).willReturn(aResponse().withStatus(201)
+                .withHeader("Content-Type", "application/json").withBody("""
+                    {"id":"a2f55d70-838f-4c41-ae7d-dad30fd25720",
+                     "metadata":{"title":"Find hotels in Zermatt","origin":"java"}}
+                    """)));
+        var input = new HashMap<>(Map.of("title", "Find hotels in Zermatt", "origin", "java"));
+        var request = new CreateConversation(" alice ", input);
+        input.put("title", "changed after construction");
+        var created = client(server).createConversation(request).join();
+        assertThat(created.id()).isEqualTo(ID);
+        assertThat(created.title()).contains("Find hotels in Zermatt");
+        assertThat(created.createdAt()).isEmpty();
+        assertThat(created.updatedAt()).isEmpty();
+        assertThatThrownBy(() -> request.metadata().put("x", "y"))
+                .isInstanceOf(UnsupportedOperationException.class);
+        verify(postRequestedFor(urlEqualTo(PATH)).withRequestBody(equalToJson("""
+            {"userId":"alice","metadata":{"title":"Find hotels in Zermatt","origin":"java"}}
+            """)));
+    }
+
+    @Test
+    void preservesLegacyOmissionAndNormalizesEmptyMetadata(WireMockRuntimeInfo server) {
+        stubFor(post(urlEqualTo(PATH)).willReturn(aResponse().withStatus(201)
+                .withHeader("Content-Type", "application/json")
+                .withBody("{\"id\":\"" + ID + "\"}")));
+        var client = client(server);
+        client.createConversation(new CreateConversation()).join();
+        client.createConversation(new CreateConversation("alice")).join();
+        client.createConversation(new CreateConversation(null, null)).join();
+        client.createConversation(new CreateConversation(null, Map.of())).join();
+        client.createConversation(new CreateConversation(null, Map.of("title", "Find hotels in Zermatt"))).join();
+        verify(3, postRequestedFor(urlEqualTo(PATH)).withRequestBody(equalToJson("{}")));
+        verify(1, postRequestedFor(urlEqualTo(PATH)).withRequestBody(equalToJson("{\"userId\":\"alice\"}")));
+        verify(1, postRequestedFor(urlEqualTo(PATH)).withRequestBody(equalToJson(
+                "{\"metadata\":{\"title\":\"Find hotels in Zermatt\"}}")));
+        assertThat(new CreateConversation().metadata()).isEmpty();
+        assertThat(new CreateConversation().getMetadata()).isEmpty();
+        assertThat(new CreateConversation("alice").metadata()).isEmpty();
+        assertThat(new CreateConversation(null, null).metadata()).isEmpty();
+        assertThat(new CreateConversation(null, Map.of()).getMetadata()).isEmpty();
+    }
+
+    private static MemoryClient client(WireMockRuntimeInfo server) {
+        return MemoryClient.create(URI.create(server.getHttpBaseUrl() + "/v1"), "key");
+    }
+}
