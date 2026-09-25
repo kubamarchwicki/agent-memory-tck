@@ -148,7 +148,7 @@ The initial client performs no automatic retries. In particular, mutating POST r
 
 Collections returned by `listConversations`, `Conversation.messages`, and `Conversation.context` are immutable snapshots. `ConversationContext` defensively copies all three list inputs so callers cannot mutate remote state or client-owned values through returned collections.
 
-Missing or null collection fields for conversations, messages, reflections, observations, and recent messages are normalized to empty immutable lists.
+The `conversations` array in conversation-list responses and the `messages` array in message-read responses are required. Missing or null arrays fail with `ResponseDecodingException`; explicit empty arrays return empty immutable lists. Optional context collections such as reflections, observations, and recent messages still normalize missing or null values to empty immutable lists.
 
 The client preserves collection order exactly as returned by NAMS and performs no client-side sorting, particularly for domain-significant message order.
 

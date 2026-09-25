@@ -12,6 +12,7 @@ import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -64,7 +65,9 @@ final class JdkMemoryClient implements MemoryClient {
                 "listConversations",
                 path.toString(),
                 ConversationsResponse.class,
-                response -> nullToEmpty(response.conversations()).stream()
+                response -> Objects.requireNonNull(
+                                response.conversations(), "conversations array is required")
+                        .stream()
                         .map(this::conversation)
                         .toList());
     }
@@ -129,7 +132,8 @@ final class JdkMemoryClient implements MemoryClient {
 
     private CompletableFuture<List<Message>> readMessages(String path) {
         return get("messages", path, MessagesResponse.class,
-                response -> List.copyOf(nullToEmpty(response.messages())));
+                response -> List.copyOf(Objects.requireNonNull(
+                        response.messages(), "messages array is required")));
     }
 
     CompletableFuture<ConversationContext> context(UUID conversationId) {
