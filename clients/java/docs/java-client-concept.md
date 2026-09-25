@@ -119,7 +119,7 @@ The models needed are only:
 - Observation
 - Reflection
 
-Model IDs as UUID, timestamps as Instant, and metadata as Map<String, Object>. Bind public request and value records directly when their shape matches hosted camelCase JSON; keep only response envelopes and live-conversation response data as private records local to the HTTP implementation.
+Model IDs as UUID, timestamps as Instant, and conversation metadata as Map<String, String>. Bind public request and value records directly when their shape matches hosted camelCase JSON; keep only response envelopes and live-conversation response data as private records local to the HTTP implementation.
 
 Keep the public domain modules deep and HTTP implementation details internal:
 
@@ -156,7 +156,7 @@ The seven-operation walking skeleton uses handwritten, package-private route map
 
 Focused unit tests feed representative hosted JSON snippets through the package-private `JsonCodec` interface to verify Jackson 3 request encoding, direct rich-type decoding, unknown-property tolerance, and disabled scalar coercion. HTTP operation tests are deferred until they can use WireMock; the credential-gated hosted test remains the walking end-to-end check.
 
-Apart from the agreed factory checks for API key and endpoint, the initial client performs no explicit validation of operation arguments or request-record fields. Request validation is deferred rather than duplicating the evolving NAMS contract.
+Apart from the agreed factory checks for API key and endpoint, the initial client performs no explicit validation of operation arguments or request-record fields. The later `Conversation.messages(int limit)` overload checks 1–200 synchronously and throws `IllegalArgumentException` outside that range. Other request validation is deferred rather than duplicating the evolving NAMS contract.
 
 ## Source authority
 
@@ -204,7 +204,7 @@ The discussion has not yet selected:
 - Release, compatibility, and NAMS API-versioning policy
 - Detailed mappings to Spring AI or LangChain4j
 - Example applications
-- Whether `Conversation.messages()` should expose a caller-supplied limit. It currently sends none, so the hosted default of 50 silently caps the result. The contract states the range and default only in prose, with no `minimum`, `maximum` or `default` in the schema, so contract verification cannot detect it.
+- Whether future pagination or cursor types are needed for message history. `Conversation.messages()` sends no limit and uses the hosted default of 50; `Conversation.messages(int limit)` sends a caller-supplied 1–200 limit, validated synchronously. Both return immutable newest-first snapshots in service order without client-side sorting, reversing, deduplication, or pagination. The hosted contract states the range and default only in prose, with no `minimum`, `maximum`, or `default` in the schema, so contract verification cannot detect a drift in those limits.
 
 These questions belong to the next design phase. They should be resolved only after the conceptual boundary above remains stable under further review.
 
