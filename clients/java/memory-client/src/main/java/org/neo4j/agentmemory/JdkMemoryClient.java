@@ -11,6 +11,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -279,7 +280,9 @@ final class JdkMemoryClient implements MemoryClient {
     }
 
     private Conversation conversation(ConversationResponse response) {
-        return new Conversation(this, response.id(), response.userId());
+        return new Conversation(this, response.id(), response.userId(), response.metadata(),
+                instant(response.createdAt()), instant(response.updatedAt()), response.title(),
+                response.firstMessageSnippet(), response.messageCount());
     }
 
     private Entity entity(EntityResponse response) {
@@ -383,7 +386,10 @@ final class JdkMemoryClient implements MemoryClient {
                 : text.substring(0, BODY_EXCERPT_LIMIT) + "…";
     }
 
-    private record ConversationResponse(UUID id, String userId) {}
+    private record ConversationResponse(
+            UUID id, String userId, Map<String, String> metadata,
+            String createdAt, String updatedAt, String title,
+            String firstMessageSnippet, Long messageCount) {}
 
     private record ConversationsResponse(List<ConversationResponse> conversations) {}
 
