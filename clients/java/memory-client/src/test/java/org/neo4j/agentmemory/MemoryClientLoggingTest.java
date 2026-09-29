@@ -190,19 +190,16 @@ class MemoryClientLoggingTest {
         var sink = debug();
         var client = new JdkMemoryClient(URI.create("ftp://endpoint-secret/v1"),
                 "api-key-secret", new Jackson3JsonCodec(), new ClientLogging(sink));
-        String operation = switch (method) {
-            case "post" -> "createConversation";
-            case "delete" -> "deleteConversation";
-            default -> "listConversations";
+        record RequestCase(String operation, Runnable invoke) {}
+        var requestCase = switch (method) {
+            case "post" -> new RequestCase("createConversation",
+                    () -> client.createConversation(new CreateConversation()));
+            case "delete" -> new RequestCase("deleteConversation", () -> client.deleteConversation(ID));
+            default -> new RequestCase("listConversations",
+                    () -> client.listConversations(new ListConversations(20)));
         };
-        assertThatThrownBy(() -> {
-            switch (method) {
-                case "post" -> client.createConversation(new CreateConversation());
-                case "delete" -> client.deleteConversation(ID);
-                default -> client.listConversations(new ListConversations(20));
-            }
-        }).isInstanceOf(IllegalArgumentException.class);
-        terminal(sink, operation, "phase=request", "outcome=failure");
+        assertThatThrownBy(requestCase.invoke()::run).isInstanceOf(IllegalArgumentException.class);
+        terminal(sink, requestCase.operation(), "phase=request", "outcome=failure");
     }
 
     @Test
