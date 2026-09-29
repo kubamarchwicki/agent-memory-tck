@@ -147,11 +147,12 @@ class MemoryClientAwaitTest {
         var missing = probe(null, "default");
         assertThat(missing.lines().filter(line -> line.contains("using default await timeout")))
                 .hasSize(1);
-        assertThat(missing).contains("INFO:", "NAMS_AWAIT_TIMEOUT_SECONDS", "30 seconds");
+        assertThat(missing).contains(" INFO ", "org.neo4j.agentmemory.AwaitSupport",
+                "NAMS_AWAIT_TIMEOUT_SECONDS", "30 seconds");
         var invalid = probe("invalid", "default");
         assertThat(invalid.lines().filter(line -> line.contains("using default await timeout")))
                 .hasSize(1);
-        assertThat(invalid).contains("WARNING:", "30 seconds");
+        assertThat(invalid).contains(" WARN ", "org.neo4j.agentmemory.AwaitSupport", "30 seconds");
     }
 
     @Test
