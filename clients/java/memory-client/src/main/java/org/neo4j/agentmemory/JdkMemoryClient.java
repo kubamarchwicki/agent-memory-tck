@@ -25,12 +25,15 @@ final class JdkMemoryClient implements MemoryClient {
     private final String apiKey;
     private final HttpClient httpClient;
     private final JsonCodec jsonCodec;
+    private final ClientLogging logging;
 
-    private JdkMemoryClient(URI endpoint, String apiKey, JsonCodec jsonCodec) {
+    JdkMemoryClient(URI endpoint, String apiKey, JsonCodec jsonCodec, ClientLogging logging) {
         this.endpoint = endpoint;
         this.apiKey = apiKey;
         this.httpClient = HttpClient.newHttpClient();
         this.jsonCodec = jsonCodec;
+        this.logging = logging;
+        logging.initialized();
     }
 
     static MemoryClient create(URI endpoint, String apiKey) {
@@ -40,7 +43,7 @@ final class JdkMemoryClient implements MemoryClient {
         if (apiKey == null || apiKey.isBlank()) {
             throw new IllegalArgumentException("apiKey must not be blank");
         }
-        return new JdkMemoryClient(endpoint, apiKey, JsonCodecs.jackson3());
+        return new JdkMemoryClient(endpoint, apiKey, JsonCodecs.jackson3(), new ClientLogging());
     }
 
     @Override
@@ -201,43 +204,53 @@ final class JdkMemoryClient implements MemoryClient {
 
     CompletableFuture<Void> deleteConversation(UUID conversationId) {
         var operation = "deleteConversation";
-        var request = request("/conversations/" + conversationId)
-                .DELETE()
-                .build();
-        return exchange(operation, request).thenApply(response -> {
-            requireSuccess(operation, response);
-            return null;
-        });
+        var log = logging.start(operation);
+        try {
+            var request = request("/conversations/" + conversationId).DELETE().build();
+            CompletableFuture<Void> result = exchange(operation, request, log).thenApply(response -> {
+                requireSuccess(operation, response);
+                return null;
+            });
+            return log.observe(result);
+        } catch (RuntimeException failure) {
+            log.failedBeforeFuture(failure);
+            throw failure;
+        }
     }
 
     private <W, T> CompletableFuture<T> get(
-            String operation,
-            String path,
-            Class<W> wireType,
-            Function<W, T> transform) {
-        var request = request(path).GET().build();
-        return exchangeAndDecode(operation, request, wireType, transform);
+            String operation, String path, Class<W> wireType, Function<W, T> transform) {
+        var log = logging.start(operation);
+        try {
+            var request = request(path).GET().build();
+            return log.observe(exchangeAndDecode(operation, request, wireType, transform, log));
+        } catch (RuntimeException failure) {
+            log.failedBeforeFuture(failure);
+            throw failure;
+        }
     }
 
     private <W, T> CompletableFuture<T> post(
-            String operation,
-            String path,
-            Object wireRequest,
-            Class<W> wireType,
-            Function<W, T> transform) {
+            String operation, String path, Object wireRequest,
+            Class<W> wireType, Function<W, T> transform) {
+        var log = logging.start(operation);
+        log.phase(ClientLogging.Phase.ENCODE);
         final byte[] body;
         try {
             body = jsonCodec.encode(wireRequest);
         } catch (RuntimeException failure) {
-            return CompletableFuture.failedFuture(new MemoryClientException(
-                    operation + " could not encode request JSON", failure));
+            return log.observe(CompletableFuture.failedFuture(new MemoryClientException(
+                    operation + " could not encode request JSON", failure)));
         }
-
-        var request = request(path)
-                .header("Content-Type", "application/json")
-                .POST(HttpRequest.BodyPublishers.ofByteArray(body))
-                .build();
-        return exchangeAndDecode(operation, request, wireType, transform);
+        log.phase(ClientLogging.Phase.REQUEST);
+        try {
+            var request = request(path).header("Content-Type", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofByteArray(body)).build();
+            return log.observe(exchangeAndDecode(operation, request, wireType, transform, log));
+        } catch (RuntimeException failure) {
+            log.failedBeforeFuture(failure);
+            throw failure;
+        }
     }
 
     private HttpRequest.Builder request(String path) {
@@ -250,9 +263,10 @@ final class JdkMemoryClient implements MemoryClient {
             String operation,
             HttpRequest request,
             Class<W> wireType,
-            Function<W, T> transform) {
-        return exchange(operation, request).thenApply(response -> {
+            Function<W, T> transform, ClientLogging.Operation log) {
+        return exchange(operation, request, log).thenApply(response -> {
             requireSuccess(operation, response);
+            log.phase(ClientLogging.Phase.DECODE);
             try {
                 return transform.apply(jsonCodec.decode(response.body(), wireType));
             } catch (RuntimeException failure) {
@@ -267,13 +281,15 @@ final class JdkMemoryClient implements MemoryClient {
     }
 
     private CompletableFuture<HttpResponse<byte[]>> exchange(
-            String operation, HttpRequest request) {
+            String operation, HttpRequest request, ClientLogging.Operation log) {
+        log.phase(ClientLogging.Phase.TRANSPORT);
         try {
             return httpClient.sendAsync(request, ofByteArray()).handle((response, failure) -> {
                 if (failure != null) {
                     throw new MemoryClientException(
                             operation + " HTTP request failed", unwrap(failure));
                 }
+                log.response(response.statusCode(), response.headers());
                 return response;
             });
         } catch (RuntimeException failure) {
