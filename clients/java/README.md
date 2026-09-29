@@ -36,6 +36,84 @@ var latest = conversation.messages(1).get(20, TimeUnit.SECONDS);
 
 Caller-side timed waits do not establish transport cancellation. The client performs no automatic write retries.
 
+## Blocking helper and logging
+
+`MemoryClient.await(future)` returns a future's value, including null for a successful void operation. `MemoryClient.await(future, Duration)` supplies a timeout for that call. Both methods are static; importing `org.neo4j.agentmemory.MemoryClient.await` statically lets you write `await(...)` as shown below. Both throw the underlying client exception directly. Other runtime exceptions and errors propagate; checked failures are wrapped in `MemoryClientException` with their cause retained.
+
+`NAMS_AWAIT_TIMEOUT_SECONDS` configures the default wait in positive whole seconds. It is read once on first use of `await(future)` and defaults to 30 seconds when absent, blank, malformed, nonpositive, or too large. An explicit positive `Duration` bypasses it and supports subsecond waits. Null or invalid explicit durations throw `IllegalArgumentException`.
+
+The first use of the built-in fallback emits one event shared by all callers: INFO when the setting is absent or blank, or WARNING when it is invalid. Both identify the variable and the 30-second timeout. An invalid setting emits only the warning. A valid setting or explicit-duration call emits no fallback event.
+
+Timeout and interruption throw `MemoryClientException`, retaining `TimeoutException` or `InterruptedException` as the cause. Interruption restores the thread's interrupt flag. The timeout measures this wait, not the operation's total lifetime. Both outcomes leave the supplied future running, so a timed-out write can still complete.
+
+For example, pass an existing conversation UUID as the first command-line argument and provide `MEMORY_API_KEY` in the environment. This example prints its recent messages in the service's newest-first order:
+
+```java
+import static org.neo4j.agentmemory.MemoryClient.await;
+
+import java.time.Duration;
+import java.util.UUID;
+import org.neo4j.agentmemory.MemoryClient;
+
+public final class ReadConversationMessages {
+    public static void main(String[] args) {
+        var client = MemoryClient.create(System.getenv("MEMORY_API_KEY"));
+        var conversationId = UUID.fromString(args[0]);
+
+        // Uses NAMS_AWAIT_TIMEOUT_SECONDS, falling back to 30 seconds.
+        var conversation = await(client.getConversation(conversationId));
+
+        // Overrides the default for this call and returns List<Message> directly.
+        var messages = await(conversation.messages(20), Duration.ofSeconds(5));
+        messages.forEach(message -> System.out.println(message.content()));
+    }
+}
+```
+
+The logger is `org.neo4j.agentmemory.AwaitSupport`, using JDK `System.Logger`. To capture these events with Logback, add the JDK Platform Logging bridge and Logback backend to the **application's** dependencies. The bridge routes `System.Logger` through SLF4J. [SLF4J documents the bridge here](https://www.slf4j.org/manual.html#jep264).
+
+```xml
+<dependency>
+  <groupId>org.slf4j</groupId>
+  <artifactId>slf4j-jdk-platform-logging</artifactId>
+  <version>2.0.20</version>
+  <scope>runtime</scope>
+</dependency>
+<dependency>
+  <groupId>ch.qos.logback</groupId>
+  <artifactId>logback-classic</artifactId>
+  <version>1.5.38</version>
+  <scope>runtime</scope>
+</dependency>
+```
+
+These are concrete example versions; use your application's dependency management to align its SLF4J 2.0 components. If the application already provides Logback, keep that backend and add the bridge. Select one SLF4J backend; for example, replace `slf4j-simple` when using Logback.
+
+Place this in the application's `src/main/resources/logback.xml`, or merge the logger entry into its existing configuration:
+
+```xml
+<configuration>
+  <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+    <encoder>
+      <pattern>%d{HH:mm:ss.SSS} %-5level %logger - %msg%n</pattern>
+    </encoder>
+  </appender>
+  <logger name="org.neo4j.agentmemory.AwaitSupport" level="INFO"/>
+  <root level="WARN">
+    <appender-ref ref="CONSOLE"/>
+  </root>
+</configuration>
+```
+
+The explicit logger level admits the fallback INFO event even with a WARN root. `System.Logger.Level.WARNING` appears as WARN in Logback. Configure the bridge and backend at startup, before the first default-timeout call; the once-only event is not replayed. See the [Logback configuration manual](https://logback.qos.ch/manual/configuration.html).
+
+You can verify the logging route independently of a client operation:
+
+```java
+System.getLogger("org.neo4j.agentmemory.AwaitSupport")
+        .log(System.Logger.Level.INFO, "NAMS logging configuration check");
+```
+
 ## Dependency and source delivery
 
 ```xml
