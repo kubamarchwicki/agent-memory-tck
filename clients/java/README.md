@@ -70,7 +70,7 @@ public final class ReadConversationMessages {
 }
 ```
 
-The logger is `org.neo4j.agentmemory.AwaitSupport`, using JDK `System.Logger`. To capture these events with Logback, add the JDK Platform Logging bridge and Logback backend to the **application's** dependencies. The bridge routes `System.Logger` through SLF4J. [SLF4J documents the bridge here](https://www.slf4j.org/manual.html#jep264).
+The client uses JDK `System.Logger`: `org.neo4j.agentmemory.JdkMemoryClient` for initialization and operations, and `org.neo4j.agentmemory.AwaitSupport` for await configuration. To capture these events with Logback, add the JDK Platform Logging bridge and Logback backend to the **application's** dependencies. The bridge routes `System.Logger` through SLF4J. [SLF4J documents the bridge here](https://www.slf4j.org/manual.html#jep264).
 
 ```xml
 <dependency>
@@ -98,21 +98,50 @@ Place this in the application's `src/main/resources/logback.xml`, or merge the l
       <pattern>%d{HH:mm:ss.SSS} %-5level %logger - %msg%n</pattern>
     </encoder>
   </appender>
-  <logger name="org.neo4j.agentmemory.AwaitSupport" level="INFO"/>
+  <logger name="org.neo4j.agentmemory" level="INFO"/>
   <root level="WARN">
     <appender-ref ref="CONSOLE"/>
   </root>
 </configuration>
 ```
 
-The explicit logger level admits the fallback INFO event even with a WARN root. `System.Logger.Level.WARNING` appears as WARN in Logback. Configure the bridge and backend at startup, before the first default-timeout call; the once-only event is not replayed. See the [Logback configuration manual](https://logback.qos.ch/manual/configuration.html).
+The package entry admits initialization and fallback INFO events even with a WARN root. Change this single entry to `level="DEBUG"` to expose ordinary operation summaries across the package. `System.Logger.Level.WARNING` appears as WARN in Logback. Configure the bridge and backend at application startup; once-only await fallback events are not replayed. See the [Logback configuration manual](https://logback.qos.ch/manual/configuration.html).
 
-You can verify the logging route independently of a client operation:
+| Level | Core events |
+| --- | --- |
+| DEBUG | Operation starts and terminal success, failure, or cancellation, including HTTP 4xx/5xx and encoding, transport, and decoding failures |
+| INFO | Successful local client construction; once-only absent or blank default-await setting fallback |
+| WARNING | Once-only invalid default-await setting fallback |
+| ERROR | None currently; applications own reporting of returned exceptions |
+
+`event=client.initialized transport=jdk-http` means local construction succeeded. It does not establish service reachability or authentication. Operation timing starts at shared request-helper entry, includes POST encoding, and ends after HTTP status validation, decoding, and domain conversion (status validation alone for DELETE). Success does not establish extraction or enrichment readiness. Synchronous validation before helper entry emits no operation event.
+
+For example, at DEBUG the client can emit these diagnostic summaries (values are illustrative):
+
+```text
+event=operation.started operation=listConversations callId=7
+event=operation.completed operation=listConversations callId=7 outcome=success durationMs=12 status=200 requestId=req-123 resultCount=2
+event=operation.started operation=getConversation callId=8
+event=operation.completed operation=getConversation callId=8 outcome=failure durationMs=9 status=404 phase=http errorType=MemoryServiceException
+```
+
+`callId` is a local counter shared across client instances in the loaded client classes; it is not a durable or distributed identifier. Terminal events carry elapsed `durationMs`, outcome, observed HTTP `status` when available, and optional result counts. Lists use `resultCount`; context uses `reflectionCount`, `observationCount`, and `messageCount`; traces use `stepCount` and `toolCallCount`; explanations use `toolCallCount` and `entityCount`. Failures and cancellations carry a phase (`encode`, `request`, `transport`, `http`, or `decode`) and the unwrapped exception's simple class name in `errorType`.
+
+An optional `requestId` comes from the first available `x-request-id`, `request-id`, or `x-amzn-requestid` response header, in that order, and is emitted only when it matches `[A-Za-z0-9._:-]{1,128}`. The client excludes credentials, raw URLs, resource IDs, message and reasoning content, tool payloads, response excerpts, and exception messages or stack traces. Field text is a diagnostic convention, not a public event API.
+
+Cancellation describes the returned future's outcome, without confirming transport cancellation. An await timeout or interruption leaves the supplied future running and emits no extra operation failure; `await` also avoids reporting propagated failures again. Operations retain the original returned future and exception behavior. Ordinary logger runtime failures are isolated from operation results, while fatal errors are not swallowed. A caller can observe future completion before its terminal logging callback finishes: `join()` does not flush logging. Threshold changes can suppress one event of a pair, and configuring a backend does not guarantee delivery.
+
+You can verify package inheritance independently of a client operation:
 
 ```java
+var clientLogger = System.getLogger("org.neo4j.agentmemory.JdkMemoryClient");
+clientLogger.log(System.Logger.Level.INFO, "probe-initialized");
+clientLogger.log(System.Logger.Level.DEBUG, "probe-completed");
 System.getLogger("org.neo4j.agentmemory.AwaitSupport")
-        .log(System.Logger.Level.INFO, "NAMS logging configuration check");
+        .log(System.Logger.Level.WARNING, "probe-invalid-setting");
 ```
+
+With the package at INFO and root at WARN, only the INFO and WARNING probes appear. In a fresh JVM with the package changed to DEBUG, all three appear.
 
 ## Dependency and source delivery
 
