@@ -11,6 +11,7 @@ import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
@@ -20,10 +21,17 @@ class ClientLoggingTest {
     @Test
     void observesTheOriginalFutureAndCountsOnlyTheResult() throws Exception {
         var sink = new RecordingClientLogger(System.Logger.Level.DEBUG);
-        var operation = new ClientLogging(sink).start("messages");
         var future = new CompletableFuture<List<String>>();
-        assertThat(operation.observe(future)).isSameAs(future);
-        operation.response(200, headers(Map.of("x-request-id", List.of("req-123"))));
+        var invocations = new AtomicInteger();
+        var result = new ClientLogging(sink).call("messages", operation -> {
+            invocations.incrementAndGet();
+            assertThat(sink.entries()).singleElement().satisfies(event ->
+                    assertThat(event.message()).startsWith("event=operation.started operation=messages "));
+            operation.response(200, headers(Map.of("x-request-id", List.of("req-123"))));
+            return future;
+        });
+        assertThat(invocations.get()).isEqualTo(1);
+        assertThat(result).isSameAs(future);
         future.complete(List.of("private-content-sentinel"));
         var events = sink.awaitEvents(2);
         assertThat(events).extracting(RecordingClientLogger.Entry::level)
@@ -39,7 +47,7 @@ class ClientLoggingTest {
         var sink = new RecordingClientLogger(System.Logger.Level.INFO);
         var logging = new ClientLogging(sink);
         logging.initialized();
-        logging.start("messages").observe(CompletableFuture.completedFuture(List.of()));
+        logging.call("messages", operation -> CompletableFuture.completedFuture(List.of()));
         assertThat(sink.entries()).containsExactly(new RecordingClientLogger.Entry(
                 System.Logger.Level.INFO, "event=client.initialized transport=jdk-http"));
     }
@@ -48,7 +56,7 @@ class ClientLoggingTest {
     void cancellationProducesOneTerminalOutcome() throws Exception {
         var sink = new RecordingClientLogger(System.Logger.Level.DEBUG);
         var future = new CompletableFuture<String>();
-        new ClientLogging(sink).start("getConversation").observe(future);
+        assertThat(new ClientLogging(sink).call("getConversation", operation -> future)).isSameAs(future);
         future.cancel(false);
         assertThat(future.complete("later")).isFalse();
         assertThat(sink.awaitEvents(2).get(1).message()).contains("outcome=cancelled");
@@ -62,9 +70,10 @@ class ClientLoggingTest {
         var failure = new MemoryServiceException(
                 "messages", 503, Map.of(), "application/json", "body-secret");
         var future = new CompletableFuture<Object>();
-        var operation = new ClientLogging(sink).start("messages");
-        operation.response(503, headers(Map.of()));
-        assertThat(operation.observe(future)).isSameAs(future);
+        assertThat(new ClientLogging(sink).call("messages", operation -> {
+            operation.response(503, headers(Map.of()));
+            return future;
+        })).isSameAs(future);
         future.completeExceptionally(failure);
         assertThatThrownBy(future::join).isInstanceOf(CompletionException.class).hasCause(failure);
         var events = sink.awaitEvents(2);
@@ -80,7 +89,7 @@ class ClientLoggingTest {
     void wrappedCancellationOmitsExceptionMessages() throws Exception {
         var sink = new RecordingClientLogger(System.Logger.Level.DEBUG);
         var future = new CompletableFuture<Object>();
-        new ClientLogging(sink).start("messages").observe(future);
+        new ClientLogging(sink).call("messages", operation -> future);
         future.completeExceptionally(new CompletionException(new CancellationException("secret")));
         var events = sink.awaitEvents(2);
         assertThat(events.get(1).message()).contains("outcome=cancelled", "errorType=CancellationException");
@@ -93,9 +102,10 @@ class ClientLoggingTest {
     void filtersEveryRequestIdHeader(String header) throws Exception {
         for (var value : List.of("req-123", "bad value", "x".repeat(129), "", "x".repeat(128))) {
             var sink = new RecordingClientLogger(System.Logger.Level.DEBUG);
-            var operation = new ClientLogging(sink).start("messages");
-            operation.response(200, headers(Map.of(header, List.of(value))));
-            operation.observe(CompletableFuture.completedFuture(List.of()));
+            new ClientLogging(sink).call("messages", operation -> {
+                operation.response(200, headers(Map.of(header, List.of(value))));
+                return CompletableFuture.completedFuture(List.of());
+            });
             var events = sink.awaitEvents(2);
             var message = events.get(1).message();
             assertThat(message).contains("status=200");
@@ -119,9 +129,11 @@ class ClientLoggingTest {
         var expected = List.of("", "first", "second", "");
         for (int index = 0; index < cases.size(); index++) {
             var sink = new RecordingClientLogger(System.Logger.Level.DEBUG);
-            var operation = new ClientLogging(sink).start("messages");
-            operation.response(200, headers(cases.get(index)));
-            operation.observe(CompletableFuture.completedFuture(List.of()));
+            var responseHeaders = headers(cases.get(index));
+            new ClientLogging(sink).call("messages", operation -> {
+                operation.response(200, responseHeaders);
+                return CompletableFuture.completedFuture(List.of());
+            });
             var events = sink.awaitEvents(2);
             var message = events.get(1).message();
             if (expected.get(index).isEmpty()) assertThat(message).doesNotContain("requestId=");
@@ -139,8 +151,8 @@ class ClientLoggingTest {
                 " stepCount=0 toolCallCount=0", " toolCallCount=0 entityCount=0");
         for (int index = 0; index < values.size(); index++) {
             var sink = new RecordingClientLogger(System.Logger.Level.DEBUG);
-            new ClientLogging(sink).start("messages")
-                    .observe(CompletableFuture.completedFuture(values.get(index)));
+            var future = CompletableFuture.completedFuture(values.get(index));
+            new ClientLogging(sink).call("messages", operation -> future);
             var events = sink.awaitEvents(2);
             assertThat(events.get(1).message()).endsWith(counts.get(index));
             assertSafe(events);
@@ -152,8 +164,8 @@ class ClientLoggingTest {
         var sink = new RecordingClientLogger(System.Logger.Level.DEBUG);
         var first = new CompletableFuture<String>();
         var second = new CompletableFuture<String>();
-        new ClientLogging(sink).start("messages").observe(first);
-        new ClientLogging(sink).start("messages").observe(second);
+        new ClientLogging(sink).call("messages", operation -> first);
+        new ClientLogging(sink).call("messages", operation -> second);
         var starts = sink.awaitEvents(2);
         assertThat(starts).allSatisfy(event -> assertThat(event.message())
                 .startsWith("event=operation.started operation=messages callId="));
@@ -195,29 +207,34 @@ class ClientLoggingTest {
         var logging = new ClientLogging(logger);
         logging.initialized();
         var success = new CompletableFuture<String>();
-        assertThat(logging.start("messages").observe(success)).isSameAs(success);
+        assertThat(logging.call("messages", operation -> success)).isSameAs(success);
         success.complete("result");
         assertThat(success.join()).isEqualTo("result");
         var failure = new IllegalArgumentException("original-failure");
         var failed = new CompletableFuture<String>();
-        assertThat(logging.start("messages").observe(failed)).isSameAs(failed);
+        assertThat(logging.call("messages", operation -> failed)).isSameAs(failed);
         failed.completeExceptionally(failure);
         assertThatThrownBy(failed::join).isInstanceOf(CompletionException.class).hasCause(failure);
-        logging.start("messages").failedBeforeFuture(failure);
+        assertThatThrownBy(() -> logging.call("messages", operation -> {
+            throw failure;
+        })).isSameAs(failure);
     }
 
     @Test
     void synchronousFailureProducesOneSafeTerminalOutcome() throws Exception {
         var sink = new RecordingClientLogger(System.Logger.Level.DEBUG);
-        var operation = new ClientLogging(sink).start("messages");
-        operation.failedBeforeFuture(new IllegalArgumentException("synchronous-secret"));
-        operation.failedBeforeFuture(new IllegalStateException("second-secret"));
-        operation.observe(CompletableFuture.completedFuture("third-secret"));
+        var failure = new IllegalArgumentException("synchronous-secret");
+        var invocations = new AtomicInteger();
+        assertThatThrownBy(() -> new ClientLogging(sink).call("messages", operation -> {
+            invocations.incrementAndGet();
+            throw failure;
+        })).isSameAs(failure);
+        assertThat(invocations.get()).isEqualTo(1);
         var events = sink.awaitEvents(2);
         assertThat(events).hasSize(2);
         assertThat(events.get(1).message()).contains("outcome=failure", "phase=request",
                 "errorType=IllegalArgumentException");
-        assertThat(events.toString()).doesNotContain("synchronous-secret", "second-secret", "third-secret");
+        assertThat(events.toString()).doesNotContain("synchronous-secret");
         assertSafe(events);
     }
 
@@ -225,10 +242,11 @@ class ClientLoggingTest {
     @EnumSource(ClientLogging.Phase.class)
     void failuresCaptureTheLastPhaseAndUnwrapExecutionExceptions(ClientLogging.Phase phase) throws Exception {
         var sink = new RecordingClientLogger(System.Logger.Level.DEBUG);
-        var operation = new ClientLogging(sink).start("messages");
-        operation.phase(phase);
-        operation.observe(CompletableFuture.failedFuture(new CompletionException(
-                new ExecutionException(new IllegalArgumentException("wrapped-secret")))));
+        new ClientLogging(sink).call("messages", operation -> {
+            operation.phase(phase);
+            return CompletableFuture.failedFuture(new CompletionException(
+                    new ExecutionException(new IllegalArgumentException("wrapped-secret"))));
+        });
         var events = sink.awaitEvents(2);
         assertThat(events.get(1).message()).contains("phase=" + phase.name().toLowerCase(java.util.Locale.ROOT),
                 "errorType=IllegalArgumentException", "outcome=failure");

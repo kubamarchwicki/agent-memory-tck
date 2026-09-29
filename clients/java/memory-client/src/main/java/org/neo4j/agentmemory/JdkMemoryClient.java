@@ -204,53 +204,40 @@ final class JdkMemoryClient implements MemoryClient {
 
     CompletableFuture<Void> deleteConversation(UUID conversationId) {
         var operation = "deleteConversation";
-        var log = logging.start(operation);
-        try {
+        return logging.call(operation, log -> {
             var request = request("/conversations/" + conversationId).DELETE().build();
-            CompletableFuture<Void> result = exchange(operation, request, log).thenApply(response -> {
+            return exchange(operation, request, log).thenApply(response -> {
                 requireSuccess(operation, response);
                 return null;
             });
-            return log.observe(result);
-        } catch (RuntimeException failure) {
-            log.failedBeforeFuture(failure);
-            throw failure;
-        }
+        });
     }
 
     private <W, T> CompletableFuture<T> get(
             String operation, String path, Class<W> wireType, Function<W, T> transform) {
-        var log = logging.start(operation);
-        try {
+        return logging.call(operation, log -> {
             var request = request(path).GET().build();
-            return log.observe(exchangeAndDecode(operation, request, wireType, transform, log));
-        } catch (RuntimeException failure) {
-            log.failedBeforeFuture(failure);
-            throw failure;
-        }
+            return exchangeAndDecode(operation, request, wireType, transform, log);
+        });
     }
 
     private <W, T> CompletableFuture<T> post(
             String operation, String path, Object wireRequest,
             Class<W> wireType, Function<W, T> transform) {
-        var log = logging.start(operation);
-        log.phase(ClientLogging.Phase.ENCODE);
-        final byte[] body;
-        try {
-            body = jsonCodec.encode(wireRequest);
-        } catch (RuntimeException failure) {
-            return log.observe(CompletableFuture.failedFuture(new MemoryClientException(
-                    operation + " could not encode request JSON", failure)));
-        }
-        log.phase(ClientLogging.Phase.REQUEST);
-        try {
+        return logging.call(operation, log -> {
+            log.phase(ClientLogging.Phase.ENCODE);
+            final byte[] body;
+            try {
+                body = jsonCodec.encode(wireRequest);
+            } catch (RuntimeException failure) {
+                return CompletableFuture.failedFuture(new MemoryClientException(
+                        operation + " could not encode request JSON", failure));
+            }
+            log.phase(ClientLogging.Phase.REQUEST);
             var request = request(path).header("Content-Type", "application/json")
                     .POST(HttpRequest.BodyPublishers.ofByteArray(body)).build();
-            return log.observe(exchangeAndDecode(operation, request, wireType, transform, log));
-        } catch (RuntimeException failure) {
-            log.failedBeforeFuture(failure);
-            throw failure;
-        }
+            return exchangeAndDecode(operation, request, wireType, transform, log);
+        });
     }
 
     private HttpRequest.Builder request(String path) {

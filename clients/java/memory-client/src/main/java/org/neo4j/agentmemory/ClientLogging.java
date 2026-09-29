@@ -10,6 +10,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 final class ClientLogging {
@@ -28,11 +29,18 @@ final class ClientLogging {
         emit(System.Logger.Level.INFO, () -> "event=client.initialized transport=jdk-http");
     }
 
-    Operation start(String operation) {
-        var call = new Operation(operation);
+    <T> CompletableFuture<T> call(String operation, Function<Operation, CompletableFuture<T>> action) {
+        var log = new Operation(operation);
         emit(System.Logger.Level.DEBUG, () -> "event=operation.started operation="
-                + call.operation + " callId=" + call.callId);
-        return call;
+                + log.operation + " callId=" + log.callId);
+        try {
+            var future = action.apply(log);
+            future.whenComplete(log::finish);
+            return future;
+        } catch (RuntimeException failure) {
+            log.finish(null, failure);
+            throw failure;
+        }
     }
 
     private void emit(System.Logger.Level level, Supplier<String> message) {
@@ -64,13 +72,6 @@ final class ClientLogging {
             response = new ResponseInfo(status, requestId);
             phase = Phase.HTTP;
         }
-
-        <T> CompletableFuture<T> observe(CompletableFuture<T> future) {
-            future.whenComplete(this::finish);
-            return future;
-        }
-
-        void failedBeforeFuture(RuntimeException failure) { finish(null, failure); }
 
         private void finish(Object value, Throwable failure) {
             if (!terminal.compareAndSet(false, true)) return;
