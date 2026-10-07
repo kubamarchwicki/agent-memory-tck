@@ -4,7 +4,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import org.assertj.core.api.AbstractAssert;
-import org.neo4j.agentmemory.Conversation;
+import org.neo4j.agentmemory.conversation.Conversation;
 
 public final class ConversationAssert extends AbstractAssert<ConversationAssert, Conversation> {
     private ConversationAssert(Conversation actual) {

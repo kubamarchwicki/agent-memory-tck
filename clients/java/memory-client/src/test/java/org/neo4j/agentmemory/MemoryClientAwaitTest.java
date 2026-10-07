@@ -1,5 +1,9 @@
 package org.neo4j.agentmemory;
 
+import org.neo4j.agentmemory.exception.MemoryClientException;
+import org.neo4j.agentmemory.exception.MemoryServiceException;
+import org.neo4j.agentmemory.exception.ResponseDecodingException;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.neo4j.agentmemory.MemoryClient.await;

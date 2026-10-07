@@ -2,8 +2,8 @@ package org.neo4j.agentmemory.e2e.assertions;
 
 import java.util.UUID;
 import org.assertj.core.api.AbstractAssert;
-import org.neo4j.agentmemory.ConversationContext;
-import org.neo4j.agentmemory.Message;
+import org.neo4j.agentmemory.conversation.ConversationContext;
+import org.neo4j.agentmemory.conversation.Message;
 
 public final class ConversationContextAssert extends AbstractAssert<ConversationContextAssert, ConversationContext> {
     private ConversationContextAssert(ConversationContext actual) { super(actual, ConversationContextAssert.class); }

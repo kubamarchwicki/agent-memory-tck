@@ -9,8 +9,8 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
-import org.neo4j.agentmemory.CreateConversation;
-import org.neo4j.agentmemory.ListConversations;
+import org.neo4j.agentmemory.conversation.CreateConversation;
+import org.neo4j.agentmemory.conversation.ListConversations;
 import org.neo4j.agentmemory.MemoryClient;
 
 class ConversationMetadataIT {

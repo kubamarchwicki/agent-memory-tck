@@ -1,5 +1,15 @@
 package org.neo4j.agentmemory;
 
+import org.neo4j.agentmemory.conversation.Conversation;
+import org.neo4j.agentmemory.conversation.CreateConversation;
+import org.neo4j.agentmemory.conversation.ListConversations;
+import org.neo4j.agentmemory.conversation.NewMessage;
+import org.neo4j.agentmemory.entity.EntitySearch;
+import org.neo4j.agentmemory.reasoning.NewReasoningStep;
+import org.neo4j.agentmemory.reasoning.NewToolCall;
+import org.neo4j.agentmemory.reasoning.ToolCallStatus;
+import org.neo4j.agentmemory.testsupport.OpenApiContract;
+
 import static com.github.tomakehurst.wiremock.client.WireMock.delete;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;

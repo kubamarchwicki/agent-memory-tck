@@ -1,5 +1,7 @@
 package org.neo4j.agentmemory;
 
+import org.neo4j.agentmemory.exception.MemoryClientException;
+
 import java.time.Duration;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
