@@ -29,7 +29,7 @@ class MemoryClientHttpTransportTest {
                           "userId": "alice"
                         }
                         """)));
-        var client = JdkMemoryClient.create(
+        var client = MemoryClient.create(
                 URI.create(wireMock.getHttpBaseUrl() + "/v1"), "test-api-key");
 
         client.createConversation(new CreateConversation("alice")).join();
@@ -81,7 +81,7 @@ class MemoryClientHttpTransportTest {
                                   "status": "success"
                                 }
                                 """)));
-        var client = JdkMemoryClient.create(
+        var client = MemoryClient.create(
                 URI.create(wireMock.getHttpBaseUrl() + "/v1"), "test-api-key");
 
         var conversation = client.createConversation(new CreateConversation()).join();

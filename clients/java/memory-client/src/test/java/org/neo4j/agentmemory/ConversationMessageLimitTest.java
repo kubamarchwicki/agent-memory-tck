@@ -67,7 +67,7 @@ class ConversationMessageLimitTest {
     }
 
     private static Conversation conversation(WireMockRuntimeInfo server) {
-        var client = (JdkMemoryClient) MemoryClient.create(
+        var client = MemoryClient.create(
                 URI.create(server.getHttpBaseUrl() + "/v1"), "key");
         return new Conversation(client, ID, null);
     }

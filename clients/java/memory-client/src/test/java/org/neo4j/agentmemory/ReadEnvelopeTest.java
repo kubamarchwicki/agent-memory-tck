@@ -106,7 +106,7 @@ class ReadEnvelopeTest {
     }
 
     private static Conversation conversation(WireMockRuntimeInfo server) {
-        return new Conversation((JdkMemoryClient) client(server), ID, null);
+        return new Conversation(client(server), ID, null);
     }
 
     private static MemoryClient client(WireMockRuntimeInfo server) {

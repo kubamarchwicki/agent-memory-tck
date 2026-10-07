@@ -3,6 +3,7 @@ package org.neo4j.agentmemory;
 import java.net.URI;
 import java.time.Duration;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
@@ -68,4 +69,26 @@ public interface MemoryClient {
     }
 
     CompletableFuture<List<Entity>> searchEntities(EntitySearch search);
+
+    CompletableFuture<Message> addMessage(UUID conversationId, NewMessage message);
+
+    CompletableFuture<List<Message>> addMessages(
+            UUID conversationId, List<NewMessage> messages);
+
+    CompletableFuture<List<Message>> messages(UUID conversationId);
+
+    CompletableFuture<List<Message>> messages(UUID conversationId, int limit);
+
+    CompletableFuture<ConversationContext> context(UUID conversationId);
+
+    CompletableFuture<ReasoningStep> recordStep(
+            UUID conversationId, NewReasoningStep step);
+
+    CompletableFuture<ToolCall> recordToolCall(UUID stepId, NewToolCall call);
+
+    CompletableFuture<ReasoningTrace> trace(UUID conversationId);
+
+    CompletableFuture<ReasoningStepExplanation> explainReasoningStep(UUID stepId);
+
+    CompletableFuture<Void> deleteConversation(UUID conversationId);
 }

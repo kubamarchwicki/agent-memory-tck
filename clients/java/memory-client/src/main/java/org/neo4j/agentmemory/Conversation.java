@@ -9,7 +9,7 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 public final class Conversation {
-    private final JdkMemoryClient client;
+    private final MemoryClient client;
     private final UUID id;
     private final String userId;
     private final Map<String, String> metadata;
@@ -19,11 +19,11 @@ public final class Conversation {
     private final String firstMessageSnippet;
     private final Long messageCount;
 
-    Conversation(JdkMemoryClient client, UUID id, String userId) {
+    public Conversation(MemoryClient client, UUID id, String userId) {
         this(client, id, userId, null, null, null, null, null, null);
     }
 
-    Conversation(JdkMemoryClient client, UUID id, String userId,
+    public Conversation(MemoryClient client, UUID id, String userId,
             Map<String, String> metadata, Instant createdAt, Instant updatedAt,
             String title, String firstMessageSnippet, Long messageCount) {
         this.client = client;

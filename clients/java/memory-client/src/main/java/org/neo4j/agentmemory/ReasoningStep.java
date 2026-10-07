@@ -7,7 +7,7 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 public final class ReasoningStep {
-    private final JdkMemoryClient client;
+    private final MemoryClient client;
     private final UUID id;
     private final UUID conversationId;
     private final String reasoning;
@@ -15,8 +15,8 @@ public final class ReasoningStep {
     private final String result;
     private final Instant createdAt;
 
-    ReasoningStep(
-            JdkMemoryClient client,
+    public ReasoningStep(
+            MemoryClient client,
             UUID id,
             UUID conversationId,
             String reasoning,

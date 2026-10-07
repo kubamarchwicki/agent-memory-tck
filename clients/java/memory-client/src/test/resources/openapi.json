@@ -67,6 +67,12 @@
         "id": {
           "type": "string"
         },
+        "metadata": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
         "role": {
           "type": "string"
         }
@@ -146,6 +152,10 @@
           "type": "boolean"
         },
         "error": {
+          "type": "string"
+        },
+        "id": {
+          "example": "e5f6a7b8-9012-3456-cdef-567890123456",
           "type": "string"
         },
         "index": {
@@ -293,6 +303,23 @@
       },
       "type": "object"
     },
+    "handlers.ConversationPurgeCounts": {
+      "properties": {
+        "aliases": {
+          "example": 2,
+          "type": "integer"
+        },
+        "entities": {
+          "example": 4,
+          "type": "integer"
+        },
+        "relationships": {
+          "example": 6,
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
     "handlers.ConversationReasoningResponse": {
       "properties": {
         "conversationId": {
@@ -346,6 +373,10 @@
             "$ref": "#/definitions/handlers.Conversation"
           },
           "type": "array"
+        },
+        "next_cursor": {
+          "description": "Cursor for the next page; empty when there are no more conversations.",
+          "type": "string"
         }
       },
       "type": "object"
@@ -386,6 +417,18 @@
       "required": [
         "ontology"
       ],
+      "type": "object"
+    },
+    "handlers.DeleteConversationResponse": {
+      "properties": {
+        "purged": {
+          "$ref": "#/definitions/handlers.ConversationPurgeCounts"
+        },
+        "status": {
+          "example": "deleted",
+          "type": "string"
+        }
+      },
       "type": "object"
     },
     "handlers.EntitiesByNameResponse": {
@@ -500,7 +543,7 @@
         },
         "relationships": {
           "items": {
-            "$ref": "#/definitions/handlers.EntityRelationship"
+            "$ref": "#/definitions/resolution.EntityRelationship"
           },
           "type": "array"
         },
@@ -560,23 +603,6 @@
             "type": "object"
           },
           "type": "array"
-        }
-      },
-      "type": "object"
-    },
-    "handlers.EntityRelationship": {
-      "properties": {
-        "relType": {
-          "type": "string"
-        },
-        "targetId": {
-          "type": "string"
-        },
-        "targetName": {
-          "type": "string"
-        },
-        "targetType": {
-          "type": "string"
         }
       },
       "type": "object"
@@ -735,6 +761,36 @@
       },
       "type": "object"
     },
+    "handlers.InvalidLimitResponse": {
+      "properties": {
+        "error": {
+          "example": "invalid_limit",
+          "type": "string"
+        },
+        "max": {
+          "example": 200,
+          "type": "integer"
+        },
+        "message": {
+          "example": "limit must be an integer between 1 and 200",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "handlers.InvalidPurgeResponse": {
+      "properties": {
+        "error": {
+          "example": "invalid_purge",
+          "type": "string"
+        },
+        "message": {
+          "example": "purge must be \"extracted\" when given",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
     "handlers.ListAPIKeysResponse": {
       "properties": {
         "keys": {
@@ -788,11 +844,21 @@
         "content": {
           "type": "string"
         },
+        "conversationId": {
+          "description": "Set on search results",
+          "type": "string"
+        },
         "createdAt": {
           "type": "string"
         },
         "id": {
           "type": "string"
+        },
+        "metadata": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
         },
         "role": {
           "type": "string"
@@ -977,6 +1043,19 @@
       },
       "type": "object"
     },
+    "handlers.QueryErrorResponse": {
+      "properties": {
+        "code": {
+          "example": "result_too_large",
+          "type": "string"
+        },
+        "error": {
+          "example": "The result is too large to show (over 16 MB). Return only the properties you need, or add a LIMIT: embedding vectors are large.",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
     "handlers.QueryResponse": {
       "properties": {
         "columns": {
@@ -984,6 +1063,16 @@
             "type": "string"
           },
           "type": "array"
+        },
+        "hasMore": {
+          "type": "boolean"
+        },
+        "nextOffset": {
+          "description": "NextOffset is absent when there is no next page, or it is past the\ndeepest row the console serves.",
+          "type": "integer"
+        },
+        "offset": {
+          "type": "integer"
         },
         "rows": {
           "items": {
@@ -1213,9 +1302,11 @@
         "error": {
           "enum": [
             "database_unavailable",
+            "external_database_error",
             "db_unreachable",
             "cypher_error",
-            "internal"
+            "internal",
+            "client_disconnected"
           ],
           "example": "database_unavailable",
           "type": "string"
@@ -1236,9 +1327,11 @@
         "error": {
           "enum": [
             "database_unavailable",
+            "external_database_error",
             "db_unreachable",
             "cypher_error",
             "internal",
+            "client_disconnected",
             "workspace_not_provisioned"
           ],
           "example": "workspace_not_provisioned",
@@ -1344,12 +1437,73 @@
       },
       "type": "object"
     },
+    "handlers.WorkspaceAddMemberRequest": {
+      "properties": {
+        "role": {
+          "enum": [
+            "admin",
+            "developer",
+            "viewer"
+          ],
+          "example": "developer",
+          "type": "string"
+        },
+        "user_id": {
+          "example": "auth0|65f1c2d4e5f6a7b8c9d0e1f2",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
     "handlers.WorkspaceAuthInfo": {
       "properties": {
         "token": {
           "type": "string"
         },
         "workspace_id": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "handlers.WorkspaceBackup": {
+      "properties": {
+        "key": {
+          "example": "dumps/3f2a9c/neo4j-2026-09-30.dump",
+          "type": "string"
+        },
+        "lastModified": {
+          "example": "2026-09-30T12:00:00Z",
+          "type": "string"
+        },
+        "size": {
+          "example": 1048576,
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "handlers.WorkspaceBackupsResponse": {
+      "properties": {
+        "backups": {
+          "items": {
+            "$ref": "#/definitions/handlers.WorkspaceBackup"
+          },
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
+    "handlers.WorkspaceBootstrapRequiredResponse": {
+      "properties": {
+        "bootstrap_url": {
+          "type": "string"
+        },
+        "code": {
+          "example": "database_bootstrap_required",
+          "type": "string"
+        },
+        "message": {
           "type": "string"
         }
       },
@@ -1525,6 +1679,13 @@
           "type": "integer"
         },
         "status": {
+          "enum": [
+            "pending",
+            "running",
+            "done",
+            "failed",
+            "switched_empty"
+          ],
           "example": "running",
           "type": "string"
         },
@@ -1539,6 +1700,38 @@
           "type": "boolean"
         },
         "workspaceId": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "handlers.WorkspaceDatabaseUpdateRequest": {
+      "properties": {
+        "connection": {
+          "$ref": "#/definitions/handlers.WorkspaceConnectionInfo"
+        },
+        "mode": {
+          "enum": [
+            "managed",
+            "external"
+          ],
+          "example": "external",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "handlers.WorkspaceDatabaseUpdateResponse": {
+      "properties": {
+        "mode": {
+          "example": "managed",
+          "type": "string"
+        },
+        "reused": {
+          "type": "boolean"
+        },
+        "status": {
+          "example": "provisioning",
           "type": "string"
         }
       },
@@ -1570,6 +1763,74 @@
         },
         "statusMessage": {
           "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "handlers.WorkspaceImportFailure": {
+      "properties": {
+        "cypherCode": {
+          "example": "Neo.ClientError.Schema.ConstraintValidationFailed",
+          "type": "string"
+        },
+        "error": {
+          "type": "string"
+        },
+        "statementIndex": {
+          "example": 17,
+          "type": "integer"
+        },
+        "statementSnippet": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "handlers.WorkspaceImportResponse": {
+      "properties": {
+        "durationMs": {
+          "example": 5321,
+          "type": "integer"
+        },
+        "statementsExecuted": {
+          "example": 412,
+          "type": "integer"
+        },
+        "statementsSkipped": {
+          "example": 3,
+          "type": "integer"
+        },
+        "stats": {
+          "$ref": "#/definitions/handlers.WorkspaceImportStats"
+        }
+      },
+      "type": "object"
+    },
+    "handlers.WorkspaceImportStats": {
+      "properties": {
+        "labelsAdded": {
+          "type": "integer"
+        },
+        "labelsRemoved": {
+          "type": "integer"
+        },
+        "nodesCreated": {
+          "type": "integer"
+        },
+        "nodesDeleted": {
+          "type": "integer"
+        },
+        "propertiesSet": {
+          "type": "integer"
+        },
+        "relationshipsCreated": {
+          "type": "integer"
+        },
+        "relationshipsDeleted": {
+          "type": "integer"
+        },
+        "skipped": {
+          "type": "integer"
         }
       },
       "type": "object"
@@ -1624,6 +1885,15 @@
             "$ref": "#/definitions/handlers.WorkspaceMember"
           },
           "type": "array"
+        }
+      },
+      "type": "object"
+    },
+    "handlers.WorkspaceProvisionRequest": {
+      "properties": {
+        "restoreFromKey": {
+          "example": "dumps/3f2a9c/neo4j-2026-09-30.dump",
+          "type": "string"
         }
       },
       "type": "object"
@@ -1782,6 +2052,15 @@
       },
       "type": "object"
     },
+    "handlers.WorkspaceStatusResponse": {
+      "properties": {
+        "status": {
+          "example": "updated",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
     "handlers.WorkspaceSummary": {
       "properties": {
         "dbMode": {
@@ -1837,10 +2116,26 @@
       },
       "type": "object"
     },
+    "handlers.WorkspaceUpdateRequest": {
+      "properties": {
+        "name": {
+          "example": "renamed-workspace",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
     "handlers.addMessageRequest": {
       "properties": {
         "content": {
           "type": "string"
+        },
+        "metadata": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Optional string key/value pairs stored with the message, at most 8192\nbytes of keys and values combined.",
+          "type": "object"
         },
         "role": {
           "type": "string"
@@ -2364,6 +2659,9 @@
         "cypher": {
           "type": "string"
         },
+        "offset": {
+          "type": "integer"
+        },
         "params": {
           "additionalProperties": true,
           "type": "object"
@@ -2583,6 +2881,7 @@
     "handlers.searchEntitiesRequest": {
       "properties": {
         "limit": {
+          "description": "Max results (1-100, default 20)",
           "type": "integer"
         },
         "query": {
@@ -2600,6 +2899,7 @@
     "handlers.searchMessagesRequest": {
       "properties": {
         "limit": {
+          "description": "Max results (1-100, default 20)",
           "type": "integer"
         },
         "query": {
@@ -2659,6 +2959,29 @@
           "type": "string"
         }
       },
+      "type": "object"
+    },
+    "handlers.workspaceMessageSearchRequest": {
+      "properties": {
+        "conversationId": {
+          "description": "Only search this conversation",
+          "type": "string"
+        },
+        "limit": {
+          "description": "Max results (1-100, default 20)",
+          "type": "integer"
+        },
+        "query": {
+          "type": "string"
+        },
+        "userId": {
+          "description": "Only search conversations created with this userId",
+          "type": "string"
+        }
+      },
+      "required": [
+        "query"
+      ],
       "type": "object"
     },
     "importers.Warning": {
@@ -3175,6 +3498,65 @@
         }
       },
       "type": "object"
+    },
+    "resolution.Direction": {
+      "enum": [
+        "out",
+        "in"
+      ],
+      "type": "string",
+      "x-enum-varnames": [
+        "DirectionOut",
+        "DirectionIn"
+      ]
+    },
+    "resolution.EntityRelationship": {
+      "properties": {
+        "confidence": {
+          "description": "Between 0 and 1; omitted when the edge carries none.",
+          "example": 0.9,
+          "type": "number"
+        },
+        "direction": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/resolution.Direction"
+            }
+          ],
+          "description": "\"out\": (entity)-[relationshipType]-\u003e(target). \"in\": (target)-[relationshipType]-\u003e(entity).",
+          "example": "out"
+        },
+        "id": {
+          "description": "The edge's UUID; for a relationship created through POST\n/v1/relationships, the id that call returned. An edge written before ids\nwere minted reports its element id until a manual write stamps one.",
+          "example": "e5f6a7b8-9012-3456-cdef-567890123456",
+          "type": "string"
+        },
+        "predicate": {
+          "description": "The original type name when an unrecognised type was written as the\nfallback type (RELATED_TO).",
+          "example": "",
+          "type": "string"
+        },
+        "relType": {
+          "description": "Deprecated: use relationshipType, which this always equals.",
+          "example": "WORKS_AT",
+          "type": "string"
+        },
+        "relationshipType": {
+          "example": "WORKS_AT",
+          "type": "string"
+        },
+        "targetId": {
+          "description": "The other entity, whichever end of the edge it is on (as are\ntargetName and targetType).",
+          "type": "string"
+        },
+        "targetName": {
+          "type": "string"
+        },
+        "targetType": {
+          "type": "string"
+        }
+      },
+      "type": "object"
     }
   },
   "host": "memory.neo4jlabs.com",
@@ -3183,7 +3565,7 @@
       "name": "Neo4j DevRel",
       "url": "https://github.com/neo4j-labs/project-gaylord"
     },
-    "description": "API key (nams_...) used directly as Bearer token, or JWT from Auth0 exchange",
+    "description": "Graph-native Agent Memory as a Service. Authenticate with your API key directly as a Bearer token.",
     "license": {
       "name": "Apache 2.0"
     },
@@ -3209,6 +3591,33 @@
         "summary": "Get public keys (JWKS)",
         "tags": [
           "JWKS"
+        ]
+      }
+    },
+    "/.well-known/skill-attest-jwks.json": {
+      "get": {
+        "description": "The public key, as a JWKS, that verifies the attestation.jws in a published skill package offline. Unauthenticated. The key set is empty when attestation signing is not configured.",
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {
+            "description": "JWKS",
+            "schema": {
+              "additionalProperties": true,
+              "type": "object"
+            }
+          },
+          "500": {
+            "description": "jwks unavailable",
+            "schema": {
+              "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          }
+        },
+        "summary": "Get the skill attestation key set",
+        "tags": [
+          "Skills"
         ]
       }
     },
@@ -3672,8 +4081,20 @@
     },
     "/v1/conversations": {
       "get": {
-        "description": "List conversations for the workspace, newest first. Returns metadata only (no message bodies), plus a display title and firstMessageSnippet per conversation. The title is read from the conversation's metadata \"title\" key (set metadata.title at creation to give a conversation a display name); firstMessageSnippet is the first message's content truncated to 120 characters. Both are empty strings when unset.",
+        "description": "List conversations for the workspace, newest first (by updatedAt, then id). Returns metadata only (no message bodies), plus a display title and firstMessageSnippet per conversation. The title is read from the conversation's metadata \"title\" key (set metadata.title at creation to give a conversation a display name); firstMessageSnippet is the first message's content truncated to 120 characters. Both are empty strings when unset.\n\nFilter to one user's conversations with userId (exact match). Page with cursor: next_cursor is set whenever the page is full, and passing it back as cursor returns the conversations after that page. An empty next_cursor means there are no more; when the last page is exactly full, the request for the next one returns an empty list. Keep the same userId while paging.",
         "parameters": [
+          {
+            "description": "Only conversations whose userId equals this value (exact, case-sensitive). Must not be empty when present.",
+            "in": "query",
+            "name": "userId",
+            "type": "string"
+          },
+          {
+            "description": "Opaque cursor from a previous response's next_cursor",
+            "in": "query",
+            "name": "cursor",
+            "type": "string"
+          },
           {
             "description": "Max conversations to return (1-200, default 50)",
             "in": "query",
@@ -3686,9 +4107,15 @@
         ],
         "responses": {
           "200": {
-            "description": "Returns conversations array",
+            "description": "Returns conversations array and next_cursor",
             "schema": {
               "$ref": "#/definitions/handlers.ConversationsResponse"
+            }
+          },
+          "400": {
+            "description": "invalid_limit when limit is outside 1..200, userId present but empty, or invalid cursor",
+            "schema": {
+              "$ref": "#/definitions/handlers.ErrorResponse"
             }
           },
           "404": {
@@ -3730,7 +4157,7 @@
         "consumes": [
           "application/json"
         ],
-        "description": "Create a new conversation session. The ID is always server-assigned - an id supplied in the body is ignored, so callers must use the returned ID for all subsequent message, context, and search calls. The body itself is optional, but when present it must be a valid JSON object. Entity extraction runs asynchronously after messages are added.",
+        "description": "Create a new conversation session. The ID is always server-assigned - an id supplied in the body is ignored, so callers must use the returned ID for all subsequent message, context, and search calls. The body is optional, and an empty body or null is treated as {}. Otherwise it must be a single JSON object carrying only userId, metadata or id; any other field (such as user_id), or data after the object, is rejected with 400 rather than dropped. Entity extraction runs asynchronously after messages are added.",
         "parameters": [
           {
             "description": "Optional user ID and metadata",
@@ -3752,7 +4179,7 @@
             }
           },
           "400": {
-            "description": "workspace_id required, or invalid request body",
+            "description": "workspace_id required, an invalid request body, or an unknown field",
             "schema": {
               "$ref": "#/definitions/handlers.ErrorResponse"
             }
@@ -3777,13 +4204,22 @@
     },
     "/v1/conversations/{id}": {
       "delete": {
-        "description": "Delete a conversation and all its messages.",
+        "description": "Delete a conversation and everything it owns: its messages, observations, reflections, agent steps and the tool calls recorded against those steps. Entities extracted from the conversation are kept; only their links to the deleted nodes are removed.\n\nWith `purge=extracted`, the same transaction also removes what was extracted only from this conversation, and the response reports how many entities, relationships and aliases it removed:\n\n- Entities whose every extraction source is in this conversation, together with their aliases. An entity is kept when it was created through the API or MCP, when another entity was merged into it, or when it has a relationship that the purge does not remove.\n- Relationships between entities whose every source message is in this conversation, unless they were created through the API or MCP.\n\nRelationships that survive stop listing this conversation's messages among their sources. Extracted data is identified through the messages it came from, so the purge must be requested on the delete that removes them: once a conversation has been deleted without it, its extracted data can no longer be told apart. A purge can wait briefly for an extraction running in the same workspace, so that extraction cannot attach a new mention to an entity the purge is removing. Any other `purge` value is rejected with 400 and deletes nothing.\n\nThe delete is idempotent and returns 200 even when the conversation does not exist. Repeating it for a conversation that is already gone still removes any messages, observations, reflections, agent steps and tool calls left behind under that conversation ID.",
         "parameters": [
           {
             "description": "Conversation ID",
             "in": "path",
             "name": "id",
             "required": true,
+            "type": "string"
+          },
+          {
+            "description": "Also remove what was extracted only from this conversation",
+            "enum": [
+              "extracted"
+            ],
+            "in": "query",
+            "name": "purge",
             "type": "string"
           }
         ],
@@ -3792,9 +4228,15 @@
         ],
         "responses": {
           "200": {
-            "description": "Returns status: deleted",
+            "description": "Returns status: deleted, plus purged counts when purge=extracted",
             "schema": {
-              "$ref": "#/definitions/handlers.StatusResponse"
+              "$ref": "#/definitions/handlers.DeleteConversationResponse"
+            }
+          },
+          "400": {
+            "description": "invalid_purge",
+            "schema": {
+              "$ref": "#/definitions/handlers.InvalidPurgeResponse"
             }
           },
           "500": {
@@ -3861,7 +4303,7 @@
     },
     "/v1/conversations/{id}/context": {
       "get": {
-        "description": "Get the structured context for an agent to build its prompt from. Returns three tiers: (1) reflections - highest-level compressed insights, (2) observations - mid-level summaries, (3) recentMessages - raw recent messages. Call this before constructing an agent's system prompt.",
+        "description": "Get the structured context for an agent to build its prompt from. Returns three tiers: (1) reflections - highest-level compressed insights, (2) observations - mid-level summaries, (3) recentMessages - raw recent messages, each with its metadata. Call this before constructing an agent's system prompt.",
         "parameters": [
           {
             "description": "Conversation ID",
@@ -3930,13 +4372,13 @@
         ],
         "summary": "Get extraction status",
         "tags": [
-          "Short-Term Memory"
+          "Conversations"
         ]
       }
     },
     "/v1/conversations/{id}/messages": {
       "get": {
-        "description": "List messages in a conversation, newest first. Use the limit parameter to control page size (default 50, max 200).",
+        "description": "List messages in a conversation, newest first, each with the metadata it was added with ({} when none). Use the limit parameter to control page size (default 50, max 200). There is no offset, so a conversation cannot be listed past its newest 200 messages.",
         "parameters": [
           {
             "description": "Conversation ID",
@@ -3962,6 +4404,12 @@
               "$ref": "#/definitions/handlers.MessagesResponse"
             }
           },
+          "400": {
+            "description": "invalid_limit",
+            "schema": {
+              "$ref": "#/definitions/handlers.InvalidLimitResponse"
+            }
+          },
           "500": {
             "description": "Internal error",
             "schema": {
@@ -3983,7 +4431,7 @@
         "consumes": [
           "application/json"
         ],
-        "description": "Add a message to a conversation. Triggers asynchronous entity extraction via the memory worker. Role must be \"user\", \"assistant\", or \"system\".",
+        "description": "Add a message to a conversation. Triggers asynchronous entity extraction via the memory worker. Role must be \"user\", \"assistant\", or \"system\". Optional metadata is an object of string values (at most 8192 bytes of keys and values combined), stored with the message and returned by the list, context and search endpoints.",
         "parameters": [
           {
             "description": "Conversation ID",
@@ -3993,7 +4441,7 @@
             "type": "string"
           },
           {
-            "description": "Message role and content",
+            "description": "Message role, content and optional metadata",
             "in": "body",
             "name": "body",
             "required": true,
@@ -4007,13 +4455,13 @@
         ],
         "responses": {
           "201": {
-            "description": "Returns id, conversationId, role, content",
+            "description": "Returns id, conversationId, role, content, metadata",
             "schema": {
               "$ref": "#/definitions/handlers.AddMessageResponse"
             }
           },
           "400": {
-            "description": "Invalid role or missing fields",
+            "description": "Invalid role, missing fields, an unknown field, a non-string metadata value (the message names the field), or oversized metadata",
             "schema": {
               "$ref": "#/definitions/handlers.ErrorResponse"
             }
@@ -4047,7 +4495,7 @@
         "consumes": [
           "application/json"
         ],
-        "description": "Add multiple messages to a conversation in a single request. Each message triggers async entity extraction independently. Maximum 100 messages per request.",
+        "description": "Add multiple messages to a conversation in a single request. Each message triggers async entity extraction independently. Maximum 100 messages per request, kept in request order. Each message takes the same optional metadata as the single add; one invalid message rejects the whole request and nothing is written.",
         "parameters": [
           {
             "description": "Conversation ID",
@@ -4077,7 +4525,7 @@
             }
           },
           "400": {
-            "description": "Validation error",
+            "description": "Validation error (the message names the offending message's index), or an unknown field in the body or in a message",
             "schema": {
               "$ref": "#/definitions/handlers.ErrorResponse"
             }
@@ -4132,6 +4580,12 @@
             "description": "Returns observations array",
             "schema": {
               "$ref": "#/definitions/handlers.ObservationsResponse"
+            }
+          },
+          "400": {
+            "description": "invalid_limit",
+            "schema": {
+              "$ref": "#/definitions/handlers.InvalidLimitResponse"
             }
           },
           "500": {
@@ -4197,7 +4651,7 @@
         "consumes": [
           "application/json"
         ],
-        "description": "Search messages within a conversation by content. Uses vector similarity search when embeddings are available, falling back to text CONTAINS. Returns searchType field indicating which method was used.",
+        "description": "Search one conversation's messages by content. Uses vector similarity search when embeddings are available, falling back to text CONTAINS. Returns searchType field indicating which method was used. Each message carries its metadata and conversationId. Unknown body fields are rejected.",
         "parameters": [
           {
             "description": "Conversation ID",
@@ -4227,7 +4681,7 @@
             }
           },
           "400": {
-            "description": "Missing query",
+            "description": "Missing or too long query (max 4096 characters), an unknown field, or invalid_limit when limit is outside 1..100",
             "schema": {
               "$ref": "#/definitions/handlers.ErrorResponse"
             }
@@ -4244,7 +4698,7 @@
             "BearerAuth": []
           }
         ],
-        "summary": "Search messages",
+        "summary": "Search messages in a conversation",
         "tags": [
           "Messages"
         ]
@@ -4252,13 +4706,19 @@
     },
     "/v1/entities": {
       "get": {
-        "description": "List all entities in the knowledge graph. Filter by type using the optional query parameter.",
+        "description": "List entities in the knowledge graph, most recently updated first. Filter by type using the optional query parameter.",
         "parameters": [
           {
             "description": "Filter by type: person, organization, location, concept, tool, custom",
             "in": "query",
             "name": "type",
             "type": "string"
+          },
+          {
+            "description": "Max entities to return (1-200, default 50)",
+            "in": "query",
+            "name": "limit",
+            "type": "integer"
           }
         ],
         "produces": [
@@ -4269,6 +4729,12 @@
             "description": "Returns entities array",
             "schema": {
               "$ref": "#/definitions/handlers.EntitiesResponse"
+            }
+          },
+          "400": {
+            "description": "invalid_limit",
+            "schema": {
+              "$ref": "#/definitions/handlers.InvalidLimitResponse"
             }
           },
           "404": {
@@ -4310,7 +4776,7 @@
         "consumes": [
           "application/json"
         ],
-        "description": "Create a new entity in the knowledge graph. Entities are automatically created during entity extraction, but can also be created manually.",
+        "description": "Create a new entity in the knowledge graph. Entities are automatically created during entity extraction, but can also be created manually. The name is first resolved against existing entities: a confident match merges onto the existing entity and returns 200 with resolution \"merged\" and merged_into, an uncertain one creates the entity with resolution \"review_pending\" and duplicate_of and queues the pair for review, and otherwise the entity is created with resolution \"created\". The type is validated against the workspace's active ontology, which rejects an undeclared type or a declared type missing a required property with 422 schema_violation.",
         "parameters": [
           {
             "description": "Entity name, type, and optional description",
@@ -4326,14 +4792,27 @@
           "application/json"
         ],
         "responses": {
+          "200": {
+            "description": "Merged onto an existing entity: id, resolution, merged_into, confidence",
+            "schema": {
+              "additionalProperties": true,
+              "type": "object"
+            }
+          },
           "201": {
-            "description": "Returns id, name, type, description",
+            "description": "Returns id, name, type, description, resolution",
             "schema": {
               "$ref": "#/definitions/handlers.EntityResponse"
             }
           },
           "400": {
             "description": "Missing required fields",
+            "schema": {
+              "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          },
+          "422": {
+            "description": "schema_violation: the type is undeclared or a required property is missing",
             "schema": {
               "$ref": "#/definitions/handlers.ErrorResponse"
             }
@@ -4419,7 +4898,7 @@
             "type": "string"
           },
           {
-            "description": "Maximum matches to return (1..100, default 25)",
+            "description": "Maximum matches to return (1-100, default 25)",
             "in": "query",
             "name": "limit",
             "type": "integer"
@@ -4436,7 +4915,7 @@
             }
           },
           "400": {
-            "description": "Missing name parameter",
+            "description": "Missing name parameter, or invalid_limit when limit is outside 1..100",
             "schema": {
               "$ref": "#/definitions/handlers.ErrorResponse"
             }
@@ -4516,7 +4995,15 @@
     },
     "/v1/entities/graph": {
       "get": {
-        "description": "Get the full entity graph with nodes and edges for visualization. Used by the Memory Browser in the dashboard.",
+        "description": "Get the entity graph as nodes and edges for visualization, used by the Memory Browser in the dashboard. Only canonical entities are nodes: merged-away entities are excluded, and each edge's endpoints resolve to their canonical entity, so a relationship absorbed by a merge re-attaches to the visible entity. Every edge carries a stable, deterministic id. Merge plumbing (MERGED_REL, SAME_AS) is excluded.",
+        "parameters": [
+          {
+            "description": "Max nodes to return (1-1000, default 250)",
+            "in": "query",
+            "name": "limit",
+            "type": "integer"
+          }
+        ],
         "produces": [
           "application/json"
         ],
@@ -4525,6 +5012,12 @@
             "description": "Returns nodes and edges arrays",
             "schema": {
               "$ref": "#/definitions/handlers.EntityGraphResponse"
+            }
+          },
+          "400": {
+            "description": "invalid_limit",
+            "schema": {
+              "$ref": "#/definitions/handlers.InvalidLimitResponse"
             }
           },
           "404": {
@@ -4568,7 +5061,7 @@
         "consumes": [
           "application/json"
         ],
-        "description": "Search entities by name or description. Uses vector similarity search when embeddings are available, falling back to text CONTAINS. Returns searchType field indicating which method was used.",
+        "description": "Search entities by name or description. Uses vector similarity search when embeddings are available, falling back to text CONTAINS. Returns searchType field indicating which method was used. Unknown body fields are rejected, so a misspelled filter cannot silently widen the search.",
         "parameters": [
           {
             "description": "Search query with optional type filter and limit",
@@ -4591,7 +5084,7 @@
             }
           },
           "400": {
-            "description": "Missing query",
+            "description": "Missing query, an unknown field, or invalid_limit when limit is outside 1..100",
             "schema": {
               "$ref": "#/definitions/handlers.ErrorResponse"
             }
@@ -4654,7 +5147,7 @@
         ]
       },
       "get": {
-        "description": "Get entity details including all relationships (incoming and outgoing edges in the knowledge graph).",
+        "description": "Get entity details including all relationships. Each relationship carries the edge's stable `id` (for one created through POST /v1/relationships, the id that call returned) and its type as `relationshipType` (`relType` is a deprecated alias that always equals it). It is reported relative to this entity: `direction` is \"out\" for (entity)-[relationshipType]-\u003e(target) and \"in\" for (target)-[relationshipType]-\u003e(entity), and the `target*` fields always describe the other entity. Merge plumbing (SAME_AS, MERGED_REL) is excluded. Only a completed merge redirects an endpoint (pending, rejected and skipped review pairs redirect nothing): a merged-away endpoint is reported as the entity it was merged into, and edges left on entities merged into this one are included. An entity merged without a SAME_AS link to the entity it was merged into, such as a redirected review, has no link to follow, so its edges are omitted at both ends and the list can be incomplete around it. An edge that resolves back to this entity is dropped. There is one relationship per distinct (direction, relationshipType, targetId), outgoing before incoming, then by relationshipType and target name; when merges leave several edges stating one, the edge between the canonical entities themselves is reported, then the one with the lowest id. relationships is an empty array when there are none.",
         "parameters": [
           {
             "description": "Entity ID",
@@ -5013,7 +5506,7 @@
         "consumes": [
           "application/json"
         ],
-        "description": "Returns the 1-hop neighborhood of a node plus the complete, canonical-resolved set of relationships among the resulting node set, for the Memory Browser. Provenance edges (MENTIONS/INFLUENCED) are included; merge plumbing (MERGED_REL/SAME_AS) is excluded. New neighbors are capped with loud truncation metadata.",
+        "description": "Returns the 1-hop neighborhood of a node (any memory label: Entity, Message, Conversation, Observation, Reflection, AgentStep, ToolCall) plus the complete, canonical-resolved set of relationships among the resulting node set (the new neighbors together with loadedIds), for the Memory Browser. Omitting loadedIds is the same as sending an empty list. Provenance edges (MENTIONS/INFLUENCED, with the paired EXTRACTED_FROM metadata collapsed in) are included; merge plumbing (MERGED_REL/SAME_AS) is excluded. New neighbors are capped at 200, with truncation metadata rather than a silent drop.",
         "parameters": [
           {
             "description": "nodeId to expand and the currently-loaded node ids",
@@ -5056,6 +5549,57 @@
         "summary": "Expand a graph node",
         "tags": [
           "Entities"
+        ]
+      }
+    },
+    "/v1/messages/search": {
+      "post": {
+        "consumes": [
+          "application/json"
+        ],
+        "description": "Search messages by content across every conversation in the workspace, optionally narrowed to one conversation (conversationId) or to the conversations created with one userId; set together, a message must match both. Uses vector similarity search when embeddings are available, falling back to text CONTAINS when they are not or when the vector search finds nothing in scope. A filtered vector search scores every embedded message in its scope, so a match is never lost to nearer messages outside it. score is present on vector results only. Returns searchType field indicating which method was used. Each message carries its metadata and conversationId. Unknown body fields are rejected, so a misspelled filter cannot silently widen the search.",
+        "parameters": [
+          {
+            "description": "Search query, optional filters and limit",
+            "in": "body",
+            "name": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/handlers.workspaceMessageSearchRequest"
+            }
+          }
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {
+            "description": "Returns messages array and searchType",
+            "schema": {
+              "$ref": "#/definitions/handlers.SearchMessagesResponse"
+            }
+          },
+          "400": {
+            "description": "Missing or too long query (max 4096 characters), an unknown field, or invalid_limit when limit is outside 1..100",
+            "schema": {
+              "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "schema": {
+              "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Search messages",
+        "tags": [
+          "Messages"
         ]
       }
     },
@@ -5868,10 +6412,10 @@
         "consumes": [
           "application/json"
         ],
-        "description": "Runs caller-supplied Cypher against the tenant's graph database with Neo4j's READ access mode. Writes are rejected server-side. Returns columns, rows, and stats.",
+        "description": "Runs caller-supplied Cypher against the tenant's graph database with Neo4j's READ access mode. Writes are rejected server-side. Returns one page of up to 1000 rows starting at offset, at most 10,000 rows deep: hasMore reports rows past the page, and nextOffset is where the next page starts when it is within reach. Each page re-runs the statement, so add ORDER BY for a stable order across pages. A page ends early when its rows reach 16 MB, and a row larger than that is refused with code result_too_large, as is a whole result larger than that from a database older than Neo4j 2025.12, which cannot stream. stats are zero unless the statement finished within the page. To read past row 10,000, add SKIP to the statement. Requires the memory:read scope.",
         "parameters": [
           {
-            "description": "Cypher query string and optional params map",
+            "description": "Cypher query string, optional params map, and the offset of the first row (default 0)",
             "in": "body",
             "name": "body",
             "required": true,
@@ -5891,9 +6435,15 @@
             }
           },
           "400": {
-            "description": "Invalid query, write operation attempted, or Cypher error",
+            "description": "Invalid query or offset, write operation attempted, Cypher error, or result too large",
             "schema": {
-              "$ref": "#/definitions/handlers.ErrorResponse"
+              "$ref": "#/definitions/handlers.QueryErrorResponse"
+            }
+          },
+          "409": {
+            "description": "Workspace database removed (database_unavailable), or workspace deprovisioned",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantUnavailableResponse"
             }
           },
           "500": {
@@ -5906,6 +6456,12 @@
             "description": "Query backend unavailable",
             "schema": {
               "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          },
+          "503": {
+            "description": "Workspace still provisioning (workspace_not_provisioned)",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantUnavailableResponse"
             }
           }
         },
@@ -6197,7 +6753,7 @@
         "consumes": [
           "application/json"
         ],
-        "description": "Create a typed, directed relationship between two entities. The type is validated against the workspace's relation allowlist, which includes every relationship type the active ontology declares: unknown types are written as the fallback type (RELATED_TO) with the original name preserved in the predicate field — never silently. When the ontology declares the type, its declared source/target entity types are enforced: an endpoint pair the ontology does not cover returns 422 ontology_violation under a strict ontology (the body lists the pairs it does declare) and collapses to the fallback type otherwise. The write is idempotent per (source, type, target): re-asserting an existing relationship updates lastSeenAt, averages confidence, and re-applies properties. Every relationship carries a UUID id.",
+        "description": "Create a typed, directed relationship between two entities. The type is validated against the workspace's relation allowlist, which includes every relationship type the active ontology declares: unknown types are written as the fallback type (RELATED_TO) with the original name preserved in the predicate field — never silently. When the ontology declares the type, its declared source/target entity types are enforced: an endpoint pair the ontology does not cover returns 422 ontology_violation under a strict ontology (the body lists the pairs it does declare) and collapses to the fallback type otherwise; when the endpoints fit, the edge is stored under the ontology's own spelling (depends_on is stored as DEPENDS_ON). Types the ontology does not declare are judged by the workspace's stored allowed_types alone and never rejected on this ground. The extraction pipeline is stricter by design: there a relation that fits no declaration is dropped, while an API call is told its write did not land. confidence defaults to 1.0. properties values must be scalars or arrays of scalars, and the server-owned keys (id, confidence, method, predicate, firstSeenAt, lastSeenAt) are rejected. The write is idempotent per (source, type, target): re-asserting an existing relationship updates lastSeenAt, averages confidence, and re-applies properties. Every relationship carries a UUID id, which a re-assert returns unchanged and GET /v1/entities/{id} reports for the relationship from both ends. Requires the entities:write scope.",
         "parameters": [
           {
             "description": "Source and target entity IDs, relationship type, optional confidence (0..1] and edge properties",
@@ -6272,7 +6828,7 @@
         "consumes": [
           "application/json"
         ],
-        "description": "Create multiple typed relationships in one request (the bulk form of POST /v1/relationships), max 100. Each edge is upserted through the same shared core as the single endpoint, so type validation, predicate fallback, and to-one cardinality behave identically. A bad edge (missing fields, cardinality violation, unknown entity) is reported in its result entry and never aborts the batch; the response always returns 200 with a per-edge results array.",
+        "description": "Create multiple typed relationships in one request (the bulk form of POST /v1/relationships), max 100. Each edge is upserted through the same shared core as the single endpoint, so type validation, predicate fallback, and to-one cardinality behave identically. A bad edge (missing fields, cardinality violation, unknown entity) is reported in its result entry and never aborts the batch; the response always returns 200 with a per-edge results array. A successful entry carries the relationship's id, the same one POST /v1/relationships would return.",
         "parameters": [
           {
             "description": "Array of relationships",
@@ -6322,7 +6878,7 @@
       "get": {
         "parameters": [
           {
-            "description": "Page size (1..200, default 50)",
+            "description": "Page size (1-200, default 50)",
             "in": "query",
             "name": "limit",
             "type": "integer"
@@ -6355,6 +6911,12 @@
             "schema": {
               "additionalProperties": true,
               "type": "object"
+            }
+          },
+          "400": {
+            "description": "invalid_limit",
+            "schema": {
+              "$ref": "#/definitions/handlers.InvalidLimitResponse"
             }
           }
         },
@@ -6718,6 +7280,7 @@
     },
     "/v1/skills": {
       "get": {
+        "description": "List the workspace's skills with their latest-version summary. Each item carries attested: whether the served version was signed at publish time. Requires skills:read.",
         "produces": [
           "application/json"
         ],
@@ -6743,6 +7306,7 @@
     },
     "/v1/skills/capabilities": {
       "get": {
+        "description": "Report which gated skill features this deployment enables (distillation, composition, autosuggest, attestationConfigured) and the publish-gate thresholds (groundingThreshold, coverageThreshold), so a client can hide unavailable actions instead of meeting a 501. Configuration only, no database access. Requires skills:read.",
         "produces": [
           "application/json"
         ],
@@ -6771,6 +7335,7 @@
         "consumes": [
           "application/json"
         ],
+        "description": "Validate the scope, create a distillation run with status queued and enqueue it; poll GET /v1/skills/runs/{id} for progress. scope.type is required, one of workspace, conversations, entity, ontology_class or time, and the optional userId filter composes with any type. There is no implicit workspace default: omitting the type returns 400. Requires skills:write.",
         "parameters": [
           {
             "description": "Scope to distill",
@@ -6792,6 +7357,19 @@
               "additionalProperties": true,
               "type": "object"
             }
+          },
+          "400": {
+            "description": "scope.type required",
+            "schema": {
+              "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          },
+          "501": {
+            "description": "feature_disabled (skill_distillation)",
+            "schema": {
+              "additionalProperties": true,
+              "type": "object"
+            }
           }
         },
         "security": [
@@ -6807,6 +7385,7 @@
     },
     "/v1/skills/governance": {
       "get": {
+        "description": "Audit the workspace's skills: steps and claims that lost their grounding, skills with no validation component, the drifted set, and two reuse signals. reuseCandidates are skill groups sharing a sub-procedure-sized subset of grounding sources, a signal to compose; duplicateSkills are groups whose grounding is largely coextensive (overlapRatio of at least 0.8 of the smaller skill), a signal to archive one. Each group carries skillIds, skillNames, sharedSourceCount, sampleSources and overlapRatio. Requires skills:read.",
         "produces": [
           "application/json"
         ],
@@ -6832,6 +7411,7 @@
     },
     "/v1/skills/published": {
       "get": {
+        "description": "List the workspace's published skills, each with its name, served version, digest, whether it is attested and a download URL: the discovery surface for agentskills.io-compatible runtimes. Requires skills:read.",
         "produces": [
           "application/json"
         ],
@@ -6860,6 +7440,7 @@
         "consumes": [
           "application/json"
         ],
+        "description": "Apply one approve or reject decision to up to 100 skills. Ids are deduplicated, preserving order. Per-skill semantics match the single review endpoint, and a skill that cannot be reviewed is reported in its own result row rather than failing the request. Requires skills:write.",
         "parameters": [
           {
             "description": "Skill IDs plus one shared decision",
@@ -6881,6 +7462,12 @@
               "additionalProperties": true,
               "type": "object"
             }
+          },
+          "400": {
+            "description": "empty list, more than 100 skills, or an invalid decision",
+            "schema": {
+              "$ref": "#/definitions/handlers.ErrorResponse"
+            }
           }
         },
         "security": [
@@ -6896,9 +7483,10 @@
     },
     "/v1/skills/runs": {
       "get": {
+        "description": "List the workspace's recent distillation and scan runs, newest first. Each row carries the same fields as GET /v1/skills/runs/{id}, plus kind and batchId. Requires skills:read.",
         "parameters": [
           {
-            "description": "Max runs to return (default 20, clamped to [1,100])",
+            "description": "Max runs to return (1-100, default 20)",
             "in": "query",
             "name": "limit",
             "type": "integer"
@@ -6920,6 +7508,12 @@
               "additionalProperties": true,
               "type": "object"
             }
+          },
+          "400": {
+            "description": "invalid_limit",
+            "schema": {
+              "$ref": "#/definitions/handlers.InvalidLimitResponse"
+            }
           }
         },
         "security": [
@@ -6935,6 +7529,7 @@
     },
     "/v1/skills/runs/{id}": {
       "get": {
+        "description": "Poll a distillation run's status, progress, and final grounding and coverage scores. Requires skills:read.",
         "parameters": [
           {
             "description": "Run ID",
@@ -6972,6 +7567,7 @@
         "consumes": [
           "application/json"
         ],
+        "description": "Segment the scoped memory into candidate procedure sub-scopes without generating any skill; poll the returned run, whose result lists the candidates. Requires skills:write.",
         "parameters": [
           {
             "description": "Scope to scan (defaults to the whole workspace)",
@@ -6992,6 +7588,13 @@
               "additionalProperties": true,
               "type": "object"
             }
+          },
+          "501": {
+            "description": "feature_disabled (skill_distillation or skill_autosuggest)",
+            "schema": {
+              "additionalProperties": true,
+              "type": "object"
+            }
           }
         },
         "security": [
@@ -7007,6 +7610,7 @@
     },
     "/v1/skills/{id}": {
       "get": {
+        "description": "A skill, its rendered SKILL.md and its version history. The response adds attested and coherenceCommunities (the number of step communities the distiller detected), and each versions[] entry carries attested and reviewFeedback. Requires skills:read.",
         "parameters": [
           {
             "description": "Skill ID",
@@ -7041,12 +7645,19 @@
     },
     "/v1/skills/{id}/download": {
       "get": {
+        "description": "The skill package as an inline zip: SKILL.md, references/*.md and provenance.json, plus attestation.jws when the version was signed at publish time. Defaults to the served version: the published one, else the latest. Requires skills:read.",
         "parameters": [
           {
             "description": "Skill ID",
             "in": "path",
             "name": "id",
             "required": true,
+            "type": "string"
+          },
+          {
+            "description": "Skill version ID",
+            "in": "query",
+            "name": "version",
             "type": "string"
           }
         ],
@@ -7074,12 +7685,19 @@
     },
     "/v1/skills/{id}/drift": {
       "get": {
+        "description": "Compare a version's recorded provenance against the live graph and flag claims whose source nodes were deleted or merged, a signal to re-distill. Defaults to the served version: the published one, else the latest. Requires skills:read.",
         "parameters": [
           {
             "description": "Skill ID",
             "in": "path",
             "name": "id",
             "required": true,
+            "type": "string"
+          },
+          {
+            "description": "Skill version ID",
+            "in": "query",
+            "name": "version",
             "type": "string"
           }
         ],
@@ -7111,6 +7729,7 @@
         "consumes": [
           "application/json"
         ],
+        "description": "Validate a proposed edit ({ops, version?}) against the served version's graph and return {valid, errors, steps}. Never mutates. Requires skills:write.",
         "parameters": [
           {
             "description": "Skill ID",
@@ -7148,6 +7767,7 @@
         "consumes": [
           "application/json"
         ],
+        "description": "Re-validate the edit ops against the served version and, on success, enqueue a run that applies them and cuts a new in_review version; the published version keeps serving until the new one is reviewed. Returns {runId, status}; an invalid edit returns 400 {valid: false, errors}. Requires skills:write.",
         "parameters": [
           {
             "description": "Skill ID",
@@ -7174,6 +7794,13 @@
               "additionalProperties": true,
               "type": "object"
             }
+          },
+          "501": {
+            "description": "feature_disabled (skill_distillation)",
+            "schema": {
+              "additionalProperties": true,
+              "type": "object"
+            }
           }
         },
         "security": [
@@ -7189,12 +7816,19 @@
     },
     "/v1/skills/{id}/explain-provenance": {
       "get": {
+        "description": "Resolve each claim of a skill version to the decisions, entities and messages that grounded it. Defaults to the served version: the published one, else the latest. Requires skills:read.",
         "parameters": [
           {
             "description": "Skill ID",
             "in": "path",
             "name": "id",
             "required": true,
+            "type": "string"
+          },
+          {
+            "description": "Skill version ID",
+            "in": "query",
+            "name": "version",
             "type": "string"
           }
         ],
@@ -7226,6 +7860,7 @@
         "consumes": [
           "application/json"
         ],
+        "description": "Lift a contiguous set of steps of the served version into a new sub-procedure skill, referenced from the parent by a call step. Asynchronous: returns a runId to poll. Requires skills:write.",
         "parameters": [
           {
             "description": "Skill ID",
@@ -7245,6 +7880,13 @@
               "additionalProperties": true,
               "type": "object"
             }
+          },
+          "501": {
+            "description": "feature_disabled (skill_distillation, or skill_composition when composition is off)",
+            "schema": {
+              "additionalProperties": true,
+              "type": "object"
+            }
           }
         },
         "security": [
@@ -7260,6 +7902,7 @@
     },
     "/v1/skills/{id}/publish": {
       "post": {
+        "description": "Publish the latest version. It must be review-approved (409 otherwise), and every sub-procedure it calls must itself be published (409 otherwise). When an attestation key is configured, publishing signs a detached JWS over the version digest. Requires skills:write.",
         "parameters": [
           {
             "description": "Skill ID",
@@ -7304,6 +7947,7 @@
         "consumes": [
           "application/json"
         ],
+        "description": "The human-review gate: approve or reject the latest version. An approved version may then be published; a rejected skill returns to draft. A decision is accepted only while the latest version is pending review, so a second review returns 409. Requires skills:write.",
         "parameters": [
           {
             "description": "Skill ID",
@@ -7354,6 +7998,7 @@
     },
     "/v1/skills/{id}/steps/{stepId}/repair": {
       "post": {
+        "description": "Re-ground a single drifted step of the latest version, for example re-pointing a merged entity, under the workspace lock, and cut a patch version that leaves the other reviewed steps untouched. Asynchronous: returns a runId to poll. Requires skills:write.",
         "parameters": [
           {
             "description": "Skill ID",
@@ -7380,6 +8025,13 @@
               "additionalProperties": true,
               "type": "object"
             }
+          },
+          "501": {
+            "description": "feature_disabled (skill_distillation)",
+            "schema": {
+              "additionalProperties": true,
+              "type": "object"
+            }
           }
         },
         "security": [
@@ -7395,12 +8047,19 @@
     },
     "/v1/skills/{id}/verify": {
       "get": {
+        "description": "Verify a version's stored attestation against the attestation public key and confirm it binds the version's current digest, which detects tampering or a stale attestation. Returns verified, plus reason, versionId and digest. Defaults to the served version: the published one, else the latest. The key is also published at /.well-known/skill-attest-jwks.json for offline verification. Requires skills:read.",
         "parameters": [
           {
             "description": "Skill ID",
             "in": "path",
             "name": "id",
             "required": true,
+            "type": "string"
+          },
+          {
+            "description": "Skill version ID",
+            "in": "query",
+            "name": "version",
             "type": "string"
           }
         ],
@@ -7424,6 +8083,38 @@
         "summary": "Verify a skill version's attestation",
         "tags": [
           "Skills"
+        ]
+      }
+    },
+    "/v1/status": {
+      "get": {
+        "description": "Report the health of each NAMS service and the state of the background processing queues: length, consumer lag, pending entries and a sample of recent entries with sensitive fields removed. Used by the dashboard's status view. Requires the memory:read scope.",
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {
+            "description": "services and streams",
+            "schema": {
+              "additionalProperties": true,
+              "type": "object"
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "schema": {
+              "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Get system status",
+        "tags": [
+          "System"
         ]
       }
     },
@@ -7479,6 +8170,49 @@
       }
     },
     "/v1/workspace": {
+      "delete": {
+        "description": "Soft-delete the current workspace. Owner only, with a user token. A user's last remaining workspace cannot be deleted. When the request carries the user's Auth0 access token in X-Auth0-Token, the managed database is stopped as well; otherwise it expires through inactivity.",
+        "parameters": [
+          {
+            "description": "Auth0 access token, used to stop the managed database",
+            "in": "header",
+            "name": "X-Auth0-Token",
+            "type": "string"
+          }
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/handlers.WorkspaceStatusResponse"
+            }
+          },
+          "400": {
+            "description": "cannot delete your only workspace",
+            "schema": {
+              "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          },
+          "403": {
+            "description": "insufficient workspace role",
+            "schema": {
+              "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Delete the workspace",
+        "tags": [
+          "Workspace"
+        ]
+      },
       "get": {
         "description": "Return details for the workspace identified by the X-Workspace-Id header.",
         "produces": [
@@ -7513,11 +8247,109 @@
         "tags": [
           "Workspace"
         ]
+      },
+      "put": {
+        "consumes": [
+          "application/json"
+        ],
+        "description": "Rename the current workspace. Names are unique per owner. Requires the workspace:admin scope and a user token whose workspace role is owner or admin — an API key is rejected with 403.",
+        "parameters": [
+          {
+            "description": "New workspace name",
+            "in": "body",
+            "name": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/handlers.WorkspaceUpdateRequest"
+            }
+          }
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/handlers.WorkspaceStatusResponse"
+            }
+          },
+          "400": {
+            "description": "invalid request body",
+            "schema": {
+              "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          },
+          "403": {
+            "description": "insufficient workspace role",
+            "schema": {
+              "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          },
+          "409": {
+            "description": "name_taken (includes existing_workspace_id)",
+            "schema": {
+              "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Rename the workspace",
+        "tags": [
+          "Workspace"
+        ]
+      }
+    },
+    "/v1/workspace/backups": {
+      "get": {
+        "description": "List the backups of the workspace's current or previous managed database, most recent first. Empty when the workspace never had a managed database. Requires a user token whose workspace role is owner or admin.",
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/handlers.WorkspaceBackupsResponse"
+            }
+          },
+          "403": {
+            "description": "insufficient workspace role",
+            "schema": {
+              "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          },
+          "412": {
+            "description": "a one-time dashboard login is required first",
+            "schema": {
+              "$ref": "#/definitions/handlers.WorkspaceBootstrapRequiredResponse"
+            }
+          },
+          "502": {
+            "description": "failed to list backups",
+            "schema": {
+              "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "List database backups",
+        "tags": [
+          "Workspace"
+        ]
       }
     },
     "/v1/workspace/database": {
       "get": {
-        "description": "Return the workspace's database mode and connection info. The password is never included.",
+        "description": "Return the workspace's database mode and connection info. The password is never included. Managed mode returns connections.rw; external mode returns a single connection object instead. sandboxActive is omitted when the database's liveness cannot be determined.",
         "produces": [
           "application/json"
         ],
@@ -7550,11 +8382,90 @@
         "tags": [
           "Workspace"
         ]
+      },
+      "put": {
+        "consumes": [
+          "application/json"
+        ],
+        "description": "Switch the workspace between a managed database and an external Neo4j. Switching to external tests the connection and creates the schema before anything is stored; on failure the workspace keeps its current mode. Switching to managed reuses the previous managed database if it is still running (200), and otherwise provisions a new one in the background (202), which needs the user's Auth0 access token in X-Auth0-Token. Data is not copied: use the database copy endpoints for that. Requires a user token whose workspace role is owner or admin.",
+        "parameters": [
+          {
+            "description": "Target mode and, for external, the connection",
+            "in": "body",
+            "name": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/handlers.WorkspaceDatabaseUpdateRequest"
+            }
+          },
+          {
+            "description": "Auth0 access token, required to provision a managed database",
+            "in": "header",
+            "name": "X-Auth0-Token",
+            "type": "string"
+          }
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/handlers.WorkspaceDatabaseUpdateResponse"
+            }
+          },
+          "202": {
+            "description": "managed database provisioning",
+            "schema": {
+              "$ref": "#/definitions/handlers.WorkspaceDatabaseUpdateResponse"
+            }
+          },
+          "400": {
+            "description": "invalid mode or connection, or missing Auth0 token",
+            "schema": {
+              "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          },
+          "403": {
+            "description": "insufficient workspace role, or workspace_limit_reached",
+            "schema": {
+              "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          },
+          "409": {
+            "description": "copy_in_progress or database_in_use",
+            "schema": {
+              "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          },
+          "412": {
+            "description": "a one-time dashboard login is required first",
+            "schema": {
+              "$ref": "#/definitions/handlers.WorkspaceBootstrapRequiredResponse"
+            }
+          },
+          "502": {
+            "description": "external database connection or schema init failed",
+            "schema": {
+              "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Switch database mode",
+        "tags": [
+          "Workspace"
+        ]
       }
     },
     "/v1/workspace/database/copy": {
       "get": {
-        "description": "Return the most recent database-copy job for the workspace (the optional data copy that runs when switching database mode), or 404 when none exists. Polled by the dashboard for progress.",
+        "description": "Return the most recent database-copy job for the workspace (the optional data copy that runs when switching database mode), or 404 when none exists. Polled by the dashboard for progress. status switched_empty means the switch completed into an empty managed database because the copy failed, and the source external database still holds the data; failureMessage accompanies the failure states. Requires a user token whose workspace role is owner or admin.",
         "produces": [
           "application/json"
         ],
@@ -7586,7 +8497,7 @@
         "consumes": [
           "application/json"
         ],
-        "description": "Enqueue a copy of the workspace's data into its new database (runs as a background job; the mode flip is its final step). Re-runs preflight server-side. 409 when a copy is already in progress or the destination is non-empty without wipeDestination.",
+        "description": "Enqueue a copy of the workspace's data into its new database. It runs as a background job and does not switch the mode up front: the switch is the copy's final step. Preflight is re-run server-side. wipeDestination must be true to overwrite a non-empty destination. Returns 409 copy_in_progress when a copy is already running, 409 destination_not_empty when a wipe is needed but not confirmed, and 422 when preflight fails. Requires a user token whose workspace role is owner or admin.",
         "parameters": [
           {
             "description": "Target mode + optional destination connection + wipe flag",
@@ -7643,7 +8554,7 @@
         "consumes": [
           "application/json"
         ],
-        "description": "Check whether the workspace's data can be copied into the database it is switching to. external→managed verifies APOC on the source; managed→external tests the destination and reports its node count.",
+        "description": "Check, without enqueuing anything, whether the workspace's data can be copied into the database it is switching to. external→managed verifies the source is reachable and has APOC, which the export needs; managed→external tests the destination and reports its node count, which drives the wipe confirmation. connection is required only for targetMode external. canCopy is the one flag to read, with reason set when it is false; a read error against the destination reports canCopy false, never an empty database, so a non-empty destination is never silently overwritten. Requires a user token whose workspace role is owner or admin.",
         "parameters": [
           {
             "description": "Target mode + optional destination connection",
@@ -7683,12 +8594,141 @@
         ]
       }
     },
+    "/v1/workspace/database/credentials": {
+      "get": {
+        "description": "Return the database configuration with the password included. Requires a user token whose workspace role is owner or admin — an API key is rejected with 403, so a leaked key cannot read the database password. Every reveal is audit-logged.",
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/handlers.WorkspaceDatabaseConfigResponse"
+            }
+          },
+          "403": {
+            "description": "insufficient workspace role",
+            "schema": {
+              "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          },
+          "404": {
+            "description": "workspace not found",
+            "schema": {
+              "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Reveal database credentials",
+        "tags": [
+          "Workspace"
+        ]
+      }
+    },
+    "/v1/workspace/database/export": {
+      "post": {
+        "description": "Export the workspace database's schema and data as a Cypher script (apoc.export.cypher.all), returned as a file attachment. The database must have APOC installed. Requires a user token whose workspace role is owner or admin.",
+        "produces": [
+          "text/plain"
+        ],
+        "responses": {
+          "200": {
+            "description": "Cypher script",
+            "schema": {
+              "type": "string"
+            }
+          },
+          "403": {
+            "description": "insufficient workspace role",
+            "schema": {
+              "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          },
+          "500": {
+            "description": "export failed, for example because APOC is missing",
+            "schema": {
+              "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Export the database",
+        "tags": [
+          "Workspace"
+        ]
+      }
+    },
+    "/v1/workspace/database/import": {
+      "post": {
+        "consumes": [
+          "multipart/form-data"
+        ],
+        "description": "Replay a .cypher script, such as one from the export endpoint, against the workspace database. Statements run one at a time in autocommit and execution stops at the first failure, so the import is not atomic: statements before the failing one stay committed. Restore into an empty database. Limits: 10 MB and 10,000 statements. Requires a user token whose workspace role is owner or admin.",
+        "parameters": [
+          {
+            "description": "Cypher script",
+            "in": "formData",
+            "name": "file",
+            "required": true,
+            "type": "file"
+          }
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/handlers.WorkspaceImportResponse"
+            }
+          },
+          "400": {
+            "description": "missing file, unparseable script or too many statements",
+            "schema": {
+              "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          },
+          "403": {
+            "description": "insufficient workspace role",
+            "schema": {
+              "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          },
+          "422": {
+            "description": "a statement failed",
+            "schema": {
+              "$ref": "#/definitions/handlers.WorkspaceImportFailure"
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Import a Cypher script",
+        "tags": [
+          "Workspace"
+        ]
+      }
+    },
     "/v1/workspace/database/test": {
       "post": {
         "consumes": [
           "application/json"
         ],
-        "description": "Test reachability of an external Neo4j connection without storing anything. The URI is SSRF-validated.",
+        "description": "Test reachability of an external Neo4j connection without storing anything. The URI is SSRF-validated. uri, username and password are required; a blank database resolves to the instance's home database. A connection that fails returns 200 with success false; a rejected URI returns 400.",
         "parameters": [
           {
             "description": "External connection to test",
@@ -7757,11 +8797,168 @@
         "tags": [
           "Workspace"
         ]
+      },
+      "post": {
+        "consumes": [
+          "application/json"
+        ],
+        "description": "Add a user to the workspace, or change an existing member's role. Requires a user token whose workspace role is owner or admin. Only an owner can change another owner's role, and the last owner cannot be demoted.",
+        "parameters": [
+          {
+            "description": "User and role",
+            "in": "body",
+            "name": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/handlers.WorkspaceAddMemberRequest"
+            }
+          }
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "201": {
+            "description": "Created",
+            "schema": {
+              "$ref": "#/definitions/handlers.WorkspaceStatusResponse"
+            }
+          },
+          "400": {
+            "description": "user_id and role are required, or role is not admin, developer or viewer",
+            "schema": {
+              "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          },
+          "403": {
+            "description": "insufficient workspace role, or an owner-protection rule",
+            "schema": {
+              "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Add a workspace member",
+        "tags": [
+          "Workspace"
+        ]
+      }
+    },
+    "/v1/workspace/members/{userId}": {
+      "delete": {
+        "description": "Remove a user from the workspace. Requires a user token whose workspace role is owner or admin. The last owner cannot be removed.",
+        "parameters": [
+          {
+            "description": "User ID",
+            "in": "path",
+            "name": "userId",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/handlers.WorkspaceStatusResponse"
+            }
+          },
+          "400": {
+            "description": "cannot remove the last owner of a workspace",
+            "schema": {
+              "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          },
+          "403": {
+            "description": "insufficient workspace role",
+            "schema": {
+              "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Remove a workspace member",
+        "tags": [
+          "Workspace"
+        ]
+      }
+    },
+    "/v1/workspace/provision": {
+      "post": {
+        "consumes": [
+          "application/json"
+        ],
+        "description": "Start provisioning a managed database for the workspace. Runs in the background: poll GET /v1/workspace for status. Pass restoreFromKey (a key from GET /v1/workspace/backups) to load the new database from a backup. Requires a user token whose workspace role is owner or admin.",
+        "parameters": [
+          {
+            "description": "Optional backup to restore",
+            "in": "body",
+            "name": "body",
+            "schema": {
+              "$ref": "#/definitions/handlers.WorkspaceProvisionRequest"
+            }
+          }
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "202": {
+            "description": "status is provisioning",
+            "schema": {
+              "$ref": "#/definitions/handlers.WorkspaceStatusResponse"
+            }
+          },
+          "400": {
+            "description": "invalid restoreFromKey",
+            "schema": {
+              "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          },
+          "403": {
+            "description": "insufficient workspace role",
+            "schema": {
+              "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          },
+          "409": {
+            "description": "provisioning_in_progress",
+            "schema": {
+              "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          },
+          "412": {
+            "description": "a one-time dashboard login is required first",
+            "schema": {
+              "$ref": "#/definitions/handlers.WorkspaceBootstrapRequiredResponse"
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Provision a managed database",
+        "tags": [
+          "Workspace"
+        ]
       }
     },
     "/v1/workspace/relations": {
       "get": {
-        "description": "Return the workspace's typed-relation allowlist configuration, falling back to system defaults when unset.",
+        "description": "Return the workspace's typed-relation allowlist configuration, falling back to system defaults when unset, plus what the workspace's active ontology contributes. allowed_types is what the workspace stored and the only field PUT writes; ontology_types is what the active ontology declares, derived on every read; effective_allowed_types is their union and the set a relationship write is judged against. A type outside it collapses onto fallback_type, with the original name kept in the edge's predicate property. ontology_types is omitted when the workspace has no active ontology or the lookup failed.",
         "produces": [
           "application/json"
         ],
@@ -7793,7 +8990,7 @@
         "consumes": [
           "application/json"
         ],
-        "description": "Set the workspace's typed-relation allowlist. The body is merged on top of the system defaults, so a partial body is safe. Entries in allowed_types are normalized to UPPER_SNAKE_CASE; entries containing characters outside [A-Za-z0-9_-/.,] are dropped at validation. Types declared by the workspace's active ontology are added automatically at read time and do not need to be listed here. Requires a user token whose workspace role is owner or admin — an API key is rejected with 403.",
+        "description": "Set the workspace's typed-relation allowlist. The body is merged on top of the system defaults, so a partial body is safe. Entries in allowed_types are case-insensitive and normalized to UPPER_SNAKE_CASE; entries containing characters outside [A-Za-z0-9_-/.,] are dropped at validation. Types declared by the workspace's active ontology are added automatically at read time and should not be listed here: sending them stores a snapshot that stops tracking the ontology once it is edited. Requires a user token whose workspace role is owner or admin — an API key is rejected with 403 user token required, even one carrying workspace:admin.",
         "parameters": [
           {
             "description": "Partial or complete relation configuration",
@@ -7845,6 +9042,49 @@
         ]
       }
     },
+    "/v1/workspace/reprovision": {
+      "post": {
+        "description": "Restart provisioning for a workspace whose provisioning is stuck or failed. Runs in the background: poll GET /v1/workspace for status. Requires a user token whose workspace role is owner or admin.",
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "202": {
+            "description": "status is provisioning",
+            "schema": {
+              "$ref": "#/definitions/handlers.WorkspaceStatusResponse"
+            }
+          },
+          "403": {
+            "description": "insufficient workspace role",
+            "schema": {
+              "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          },
+          "409": {
+            "description": "provisioning_in_progress",
+            "schema": {
+              "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          },
+          "412": {
+            "description": "a one-time dashboard login is required first",
+            "schema": {
+              "$ref": "#/definitions/handlers.WorkspaceBootstrapRequiredResponse"
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Reprovision the managed database",
+        "tags": [
+          "Workspace"
+        ]
+      }
+    },
     "/v1/workspace/resolution": {
       "get": {
         "description": "Return the workspace's entity-resolution configuration, falling back to system defaults when unset.",
@@ -7879,7 +9119,7 @@
         "consumes": [
           "application/json"
         ],
-        "description": "Set the workspace's entity-resolution thresholds. The body is merged on top of the system defaults, so a partial body is safe. Validate() auto-corrects pathological combinations — e.g. a review_threshold above auto_merge_threshold resets both to defaults rather than storing a band that can never be entered. Requires a user token whose workspace role is owner or admin — an API key is rejected with 403.",
+        "description": "Set the workspace's entity-resolution thresholds. The body is merged on top of the system defaults, so a partial body is safe. Validation auto-corrects pathological combinations: a review_threshold above auto_merge_threshold resets both to defaults rather than storing a band that can never be entered, and embedding_weight and fuzzy_weight are renormalized to sum to 1. Requires a user token whose workspace role is owner or admin — an API key is rejected with 403 user token required, even one carrying workspace:admin.",
         "parameters": [
           {
             "description": "Partial or complete resolution configuration",
@@ -8024,7 +9264,7 @@
       "name": "Query"
     },
     {
-      "description": "Workspace management: CRUD, membership, database provisioning (managed sandbox or external Neo4j), backups, and feature configuration. Served by the nams-tenants service via reverse proxy.",
+      "description": "Workspace management: CRUD, membership, database provisioning (managed or external Neo4j), backups, and feature configuration. Endpoints under /v1/workspace act on the workspace named by X-Workspace-Id (or bound to the credential); POST /v1/workspaces and GET /v1/users/me/workspaces act on the caller and need no X-Workspace-Id. Apart from workspace listing and the resolution and relations settings, these endpoints require the workspace:admin scope, which a Workspace API key does not carry.",
       "name": "Workspace"
     },
     {
@@ -8034,6 +9274,30 @@
     {
       "description": "Authentication - token exchange and API key management.",
       "name": "Auth"
+    },
+    {
+      "description": "Long-term memory: typed relationships between entities.",
+      "name": "Relationships"
+    },
+    {
+      "description": "Entity-resolution review: confirm or reject candidate duplicate entities the resolver was unsure about.",
+      "name": "Reviews"
+    },
+    {
+      "description": "Ontologies that declare a workspace's entity and relationship types, with versioning and RDF import.",
+      "name": "Ontology"
+    },
+    {
+      "description": "Skill generation: distill a scoped slice of workspace memory into a provenance-grounded Agent Skill (a SKILL.md package). Distillation is asynchronous: generate enqueues a run, polled at /v1/skills/runs/{id}, and a skill passes a human review before it can be published. Read endpoints need skills:read, the rest skills:write. The enqueue endpoints return 501 feature_disabled when distillation is switched off, never accepting work that would fail later; GET /v1/skills/capabilities reports which features are on.",
+      "name": "Skills"
+    },
+    {
+      "description": "In-app user feedback.",
+      "name": "Feedback"
+    },
+    {
+      "description": "Public key distribution for JWT validation",
+      "name": "JWKS"
     }
   ]
 }

@@ -24,8 +24,8 @@ class OpenApiSpecDriftIT {
         var vendored = vendored();
 
         assertThat(published)
-                .as("clients/java/docs/openapi.json has fallen behind %s; re-vendor it with "
-                        + "curl -o clients/java/docs/openapi.json %s", PUBLISHED, PUBLISHED)
+                .as("memory-client/src/test/resources/openapi.json has fallen behind %s; re-vendor it with "
+                        + "curl -o memory-client/src/test/resources/openapi.json %s", PUBLISHED, PUBLISHED)
                 .isEqualTo(vendored);
     }
 

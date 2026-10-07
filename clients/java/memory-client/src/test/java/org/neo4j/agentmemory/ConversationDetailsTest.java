@@ -88,7 +88,7 @@ class ConversationDetailsTest {
     @Test
     void copiesMetadataAndPreservesTopLevelTitleAndUuidIdentity(WireMockRuntimeInfo server) {
         var metadata = new HashMap<>(Map.of("title", "metadata title"));
-        var client = (JdkMemoryClient) client(server);
+        var client = client(server);
         var value = new Conversation(client, ID, null, metadata, null, null, "", null, null);
         metadata.put("title", "changed");
         assertThat(value.metadata()).containsExactlyInAnyOrderEntriesOf(Map.of("title", "metadata title"));

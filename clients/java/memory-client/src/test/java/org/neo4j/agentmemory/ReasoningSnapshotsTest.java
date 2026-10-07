@@ -55,8 +55,8 @@ class ReasoningSnapshotsTest {
                 "reason", "act", null, null);
     }
 
-    private static JdkMemoryClient client() {
-        return (JdkMemoryClient) MemoryClient.create(
+    private static MemoryClient client() {
+        return MemoryClient.create(
                 URI.create("https://memory.test/v1"), "key");
     }
 }

@@ -9,11 +9,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.function.Function;
@@ -102,7 +98,8 @@ final class JdkMemoryClient implements MemoryClient {
                         .toList());
     }
 
-    CompletableFuture<Message> addMessage(UUID conversationId, NewMessage message) {
+    @Override
+    public CompletableFuture<Message> addMessage(UUID conversationId, NewMessage message) {
         return post(
                 "addMessage",
                 "/conversations/" + conversationId + "/messages",
@@ -111,7 +108,8 @@ final class JdkMemoryClient implements MemoryClient {
                 response -> response);
     }
 
-    CompletableFuture<List<Message>> addMessages(
+    @Override
+    public CompletableFuture<List<Message>> addMessages(
             UUID conversationId, List<NewMessage> messages) {
         var snapshot = List.copyOf(messages);
         return post(
@@ -122,11 +120,13 @@ final class JdkMemoryClient implements MemoryClient {
                 response -> List.copyOf(nullToEmpty(response.messages())));
     }
 
-    CompletableFuture<List<Message>> messages(UUID conversationId) {
+    @Override
+    public CompletableFuture<List<Message>> messages(UUID conversationId) {
         return readMessages("/conversations/" + conversationId + "/messages");
     }
 
-    CompletableFuture<List<Message>> messages(UUID conversationId, int limit) {
+    @Override
+    public CompletableFuture<List<Message>> messages(UUID conversationId, int limit) {
         if (limit < 1 || limit > 200) {
             throw new IllegalArgumentException("limit must be between 1 and 200");
         }
@@ -139,7 +139,8 @@ final class JdkMemoryClient implements MemoryClient {
                         response.messages(), "messages array is required")));
     }
 
-    CompletableFuture<ConversationContext> context(UUID conversationId) {
+    @Override
+    public CompletableFuture<ConversationContext> context(UUID conversationId) {
         return get(
                 "context",
                 "/conversations/" + conversationId + "/context",
@@ -147,7 +148,8 @@ final class JdkMemoryClient implements MemoryClient {
                 response -> response);
     }
 
-    CompletableFuture<ReasoningStep> recordStep(
+    @Override
+    public CompletableFuture<ReasoningStep> recordStep(
             UUID conversationId, NewReasoningStep step) {
         var body = new LinkedHashMap<String, Object>();
         body.put("conversationId", conversationId);
@@ -162,7 +164,8 @@ final class JdkMemoryClient implements MemoryClient {
                 this::recordedReasoningStep);
     }
 
-    CompletableFuture<ToolCall> recordToolCall(UUID stepId, NewToolCall call) {
+    @Override
+    public CompletableFuture<ToolCall> recordToolCall(UUID stepId, NewToolCall call) {
         var body = new LinkedHashMap<String, Object>();
         body.put("stepId", stepId);
         body.put("toolName", call.toolName());
@@ -186,7 +189,8 @@ final class JdkMemoryClient implements MemoryClient {
                         null));
     }
 
-    CompletableFuture<ReasoningTrace> trace(UUID conversationId) {
+    @Override
+    public CompletableFuture<ReasoningTrace> trace(UUID conversationId) {
         return get(
                 "trace",
                 "/reasoning/trace/" + conversationId,
@@ -194,7 +198,8 @@ final class JdkMemoryClient implements MemoryClient {
                 response -> reasoningTrace(conversationId, response));
     }
 
-    CompletableFuture<ReasoningStepExplanation> explainReasoningStep(UUID stepId) {
+    @Override
+    public CompletableFuture<ReasoningStepExplanation> explainReasoningStep(UUID stepId) {
         return get(
                 "explainReasoningStep",
                 "/reasoning/explain/" + stepId,
@@ -202,7 +207,8 @@ final class JdkMemoryClient implements MemoryClient {
                 this::reasoningStepExplanation);
     }
 
-    CompletableFuture<Void> deleteConversation(UUID conversationId) {
+    @Override
+    public CompletableFuture<Void> deleteConversation(UUID conversationId) {
         var operation = "deleteConversation";
         return logging.call(operation, log -> {
             var request = request("/conversations/" + conversationId).DELETE().build();
@@ -404,48 +410,48 @@ final class JdkMemoryClient implements MemoryClient {
                 : text.substring(0, BODY_EXCERPT_LIMIT) + "…";
     }
 
-    private record ConversationResponse(
+    record ConversationResponse(
             UUID id, String userId, Map<String, String> metadata,
             String createdAt, String updatedAt, String title,
             String firstMessageSnippet, Long messageCount) {}
 
-    private record ConversationsResponse(List<ConversationResponse> conversations) {}
+    record ConversationsResponse(List<ConversationResponse> conversations) {}
 
-    private record MessagesResponse(List<Message> messages) {}
+    record MessagesResponse(List<Message> messages) {}
 
-    private record AddMessagesRequest(List<NewMessage> messages) {}
+    record AddMessagesRequest(List<NewMessage> messages) {}
 
-    private record EntityResponse(
+    record EntityResponse(
             UUID id,
             String name,
             String type,
             String description) {}
 
-    private record EntitiesResponse(
+    record EntitiesResponse(
             List<EntityResponse> entities,
             String searchType) {}
 
-    private record RecordReasoningStepResponse(
+    record RecordReasoningStepResponse(
             UUID id,
             UUID conversationId,
             String reasoning,
             String actionTaken,
             String result) {}
 
-    private record ReasoningStepResponse(
+    record ReasoningStepResponse(
             UUID id,
             String reasoning,
             String actionTaken,
             String result,
             String createdAt) {}
 
-    private record RecordToolCallResponse(
+    record RecordToolCallResponse(
             UUID id,
             UUID stepId,
             String toolName,
             ToolCallStatus status) {}
 
-    private record ToolCallResponse(
+    record ToolCallResponse(
             UUID id,
             UUID stepId,
             String toolName,
@@ -455,17 +461,17 @@ final class JdkMemoryClient implements MemoryClient {
             Long durationMs,
             String createdAt) {}
 
-    private record ReasoningTraceResponse(
+    record ReasoningTraceResponse(
             UUID conversationId,
             List<ReasoningStepResponse> steps,
             List<ToolCallResponse> toolCalls) {}
 
-    private record InfluencedEntityResponse(
+    record InfluencedEntityResponse(
             UUID id,
             String name,
             String type) {}
 
-    private record ReasoningStepExplanationResponse(
+    record ReasoningStepExplanationResponse(
             UUID id,
             UUID conversationId,
             String reasoning,
