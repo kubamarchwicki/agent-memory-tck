@@ -4,7 +4,34 @@ This Java 17 client accesses the hosted Neo4j Agent Memory Service. The core art
 
 ## Public API
 
-`MemoryClient.create(String apiKey)` uses `MEMORY_ENDPOINT` if set, otherwise `https://memory.neo4jlabs.com/v1`. `MemoryClient.create(URI endpoint, String apiKey)` selects an explicit endpoint. The client provides `createConversation(CreateConversation)`, `listConversations(ListConversations)`, `getConversation(UUID)`, and `searchEntities(String)` / `searchEntities(EntitySearch)`.
+MemoryClient.create(String apiKey) uses MEMORY_ENDPOINT if set, otherwise
+https://memory.neo4jlabs.com/v1. MemoryClient.create(URI endpoint, String apiKey)
+selects an explicit endpoint. Both factories construct the default JDK HTTP
+adapter without checking remote reachability or authentication.
+
+MemoryClient defines all supported domain operations, including those addressed
+by Conversation and Reasoning Step UUIDs. Applications can use these operations
+directly or through the live Conversation and ReasoningStep handles. Every
+returned handle is bound to the client that produced it. Alternate adapters
+implement MemoryClient and can construct those same handles from domain values.
+
+The method Javadoc on MemoryClient defines the shared operation behavior,
+including result order, immutable collections, validation timing, and failures.
+The handle methods link to those contracts. Successful writes do not establish
+that extraction or enrichment is ready.
+
+| Package | Contents |
+| --- | --- |
+| org.neo4j.agentmemory | MemoryClient and its default factories and await helpers |
+| org.neo4j.agentmemory.conversation | Conversation, requests, Messages, and Conversation Context |
+| org.neo4j.agentmemory.reasoning | Reasoning Steps, traces, explanations, and Tool Calls |
+| org.neo4j.agentmemory.entity | Entity values and search inputs |
+| org.neo4j.agentmemory.exception | Client-owned failures |
+| org.neo4j.agentmemory.internal.http | Unsupported implementation details of the default HTTP adapter |
+
+Public domain types have moved from the root package to the packages above.
+Update source imports when adopting this version. The artifact coordinates
+remain org.neo4j:agent-memory-client:0.1.0-SNAPSHOT.
 
 `CreateConversation` has `userId` and `Map<String, String> metadata` components, plus no-argument and user-only constructors. A user ID is optional; there is no caller-supplied conversation ID. Null or empty metadata becomes an immutable empty map and is omitted from the create request. The `title` metadata entry is sent as `metadata.title` and can be read from a returned conversation.
 

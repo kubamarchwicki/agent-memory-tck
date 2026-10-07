@@ -24,10 +24,20 @@ public final class Conversation {
     private final String firstMessageSnippet;
     private final Long messageCount;
 
+    /**
+     * Binds an existing remote identity and its supplied response details
+     * to a client. Construction performs no remote operation and does not
+     * verify that the remote identity exists.
+     */
     public Conversation(MemoryClient client, UUID id, String userId) {
         this(client, id, userId, null, null, null, null, null, null);
     }
 
+    /**
+     * Binds an existing remote identity and its supplied response details
+     * to a client. Construction performs no remote operation and does not
+     * verify that the remote identity exists.
+     */
     public Conversation(MemoryClient client, UUID id, String userId,
             Map<String, String> metadata, Instant createdAt, Instant updatedAt,
             String title, String firstMessageSnippet, Long messageCount) {
@@ -88,10 +98,16 @@ public final class Conversation {
         return normalized.isEmpty() ? null : normalized;
     }
 
+    /**
+     * @see MemoryClient#addMessage(UUID, NewMessage)
+     */
     public CompletableFuture<Message> addMessage(NewMessage message) {
         return client.addMessage(id, message);
     }
 
+    /**
+     * @see MemoryClient#addMessages(UUID, List)
+     */
     public CompletableFuture<List<Message>> addMessages(List<NewMessage> messages) {
         return client.addMessages(id, messages);
     }
@@ -99,6 +115,7 @@ public final class Conversation {
     /**
      * Reads an immutable newest-first sequence in service order.
      * Sends no limit; the documented service default is 50.
+     * @see MemoryClient#messages(UUID)
      */
     public CompletableFuture<List<Message>> messages() {
         return client.messages(id);
@@ -110,23 +127,36 @@ public final class Conversation {
      *
      * @param limit number of messages, from 1 through 200 inclusive
      * @throws IllegalArgumentException synchronously when limit is outside 1–200
+     * @see MemoryClient#messages(UUID, int)
      */
     public CompletableFuture<List<Message>> messages(int limit) {
         return client.messages(id, limit);
     }
 
+    /**
+     * @see MemoryClient#context(UUID)
+     */
     public CompletableFuture<ConversationContext> context() {
         return client.context(id);
     }
 
+    /**
+     * @see MemoryClient#recordStep(UUID, NewReasoningStep)
+     */
     public CompletableFuture<ReasoningStep> recordStep(NewReasoningStep step) {
         return client.recordStep(id, step);
     }
 
+    /**
+     * @see MemoryClient#trace(UUID)
+     */
     public CompletableFuture<ReasoningTrace> trace() {
         return client.trace(id);
     }
 
+    /**
+     * @see MemoryClient#deleteConversation(UUID)
+     */
     public CompletableFuture<Void> delete() {
         return client.deleteConversation(id);
     }

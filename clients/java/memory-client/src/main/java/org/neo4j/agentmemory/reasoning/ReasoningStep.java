@@ -17,6 +17,11 @@ public final class ReasoningStep {
     private final String result;
     private final Instant createdAt;
 
+    /**
+     * Binds an existing remote identity and its supplied response details
+     * to a client. Construction performs no remote operation and does not
+     * verify that the remote identity exists.
+     */
     public ReasoningStep(
             MemoryClient client,
             UUID id,
@@ -58,10 +63,16 @@ public final class ReasoningStep {
         return Optional.ofNullable(createdAt);
     }
 
+    /**
+     * @see MemoryClient#recordToolCall(UUID, NewToolCall)
+     */
     public CompletableFuture<ToolCall> recordToolCall(NewToolCall call) {
         return client.recordToolCall(id, call);
     }
 
+    /**
+     * @see MemoryClient#explainReasoningStep(UUID)
+     */
     public CompletableFuture<ReasoningStepExplanation> explanation() {
         return client.explainReasoningStep(id);
     }
