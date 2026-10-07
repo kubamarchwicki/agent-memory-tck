@@ -115,7 +115,7 @@ public final class JdkMemoryClient implements MemoryClient {
                 body,
                 EntitiesResponse.class,
                 response -> nullToEmpty(response.entities()).stream()
-                        .map(this::entity)
+                        .map(entity -> Objects.requireNonNull(entity, "entity"))
                         .toList());
     }
 
@@ -330,14 +330,6 @@ public final class JdkMemoryClient implements MemoryClient {
                 response.firstMessageSnippet(), response.messageCount());
     }
 
-    private Entity entity(EntityResponse response) {
-        return new Entity(
-                response.id(),
-                response.name(),
-                response.type(),
-                response.description());
-    }
-
     private ReasoningStep recordedReasoningStep(RecordReasoningStepResponse response) {
         return new ReasoningStep(
                 this,
@@ -442,14 +434,9 @@ public final class JdkMemoryClient implements MemoryClient {
 
     private record AddMessagesRequest(List<NewMessage> messages) {}
 
-    private record EntityResponse(
-            UUID id,
-            String name,
-            String type,
-            String description) {}
-
+    // TODO: Verify rich typed bindings for parity before adding another Jackson adapter.
     private record EntitiesResponse(
-            List<EntityResponse> entities,
+            List<Entity> entities,
             String searchType) {}
 
     private record RecordReasoningStepResponse(
