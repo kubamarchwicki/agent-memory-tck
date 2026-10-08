@@ -14,6 +14,30 @@ import org.neo4j.agentmemory.testsupport.EnvironmentProbe;
 
 class MemoryClientConfigurationTest {
     @Test
+    void rejectsNullLangChain4jArguments() {
+        assertThatThrownBy(() -> MemoryClientConfiguration.builder()
+                .langChain4jHttpClient(null, org.neo4j.agentmemory.testsupport.HttpClientUnderTest.TEST_EXECUTOR))
+                .isInstanceOf(NullPointerException.class).hasMessage("httpClient");
+        assertThatThrownBy(() -> MemoryClientConfiguration.builder()
+                .langChain4jHttpClient(dev.langchain4j.http.client.jdk.JdkHttpClient.builder().build(), null))
+                .isInstanceOf(NullPointerException.class).hasMessage("executor");
+    }
+
+    @Test
+    void lastHttpClientSetterWins() {
+        var restClient = org.springframework.web.client.RestClient.create();
+        var httpClient = dev.langchain4j.http.client.jdk.JdkHttpClient.builder().build();
+        var executor = org.neo4j.agentmemory.testsupport.HttpClientUnderTest.TEST_EXECUTOR;
+        var builder = MemoryClientConfiguration.builder().baseUrl("https://memory.test/v1").apiKey("key");
+        assertThat(builder.restClient(restClient, executor).langChain4jHttpClient(httpClient, executor)
+                .build().httpTransport().name()).isEqualTo("langchain4j-http");
+        assertThat(builder.langChain4jHttpClient(httpClient, executor).restClient(restClient, executor)
+                .build().httpTransport().name()).isEqualTo("spring-rest-client");
+        assertThat(builder.langChain4jHttpClient(httpClient, executor).jdkHttpClient(HttpClient.newHttpClient())
+                .build().httpTransport().name()).isEqualTo("jdk-http");
+    }
+
+    @Test
     void rejectsNullRestClientArguments() {
         assertThatThrownBy(() -> MemoryClientConfiguration.builder()
                 .restClient(null, org.neo4j.agentmemory.testsupport.HttpClientUnderTest.TEST_EXECUTOR))

@@ -4,6 +4,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import org.neo4j.agentmemory.internal.http.HttpTransport;
 import org.neo4j.agentmemory.internal.http.JdkHttpTransport;
+import org.neo4j.agentmemory.internal.http.LangChain4jHttpTransport;
 import java.util.Objects;
 import java.util.concurrent.Executor;
 import org.neo4j.agentmemory.internal.http.RestClientHttpTransport;
@@ -113,6 +114,24 @@ public final class MemoryClientConfiguration {
         public Builder restClient(RestClient restClient, Executor executor) {
             this.httpTransport = new RestClientHttpTransport(
                     Objects.requireNonNull(restClient, "restClient"),
+                    Objects.requireNonNull(executor, "executor"));
+            return this;
+        }
+
+        /**
+         * Uses the supplied LangChain4j client as configured. Non-success responses
+         * lose their headers and content type. Blocking exchanges run on executor;
+         * neither the client nor the executor is closed. Requires LangChain4j 1.0
+         * or later. Replaces any HTTP client set earlier.
+         *
+         * @param httpClient the application LangChain4j HTTP client
+         * @param executor the application executor for blocking exchanges
+         * @return this builder
+         * @throws NullPointerException if httpClient or executor is null
+         */
+        public Builder langChain4jHttpClient(dev.langchain4j.http.client.HttpClient httpClient, Executor executor) {
+            this.httpTransport = new LangChain4jHttpTransport(
+                    Objects.requireNonNull(httpClient, "httpClient"),
                     Objects.requireNonNull(executor, "executor"));
             return this;
         }

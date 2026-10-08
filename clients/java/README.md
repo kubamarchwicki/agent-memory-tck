@@ -158,6 +158,36 @@ neither the RestClient nor the executor, and the last HTTP client setter wins.
 Spring Framework 7.0 or later is required (Spring Boot 4, Spring AI 2.x).
 `org.springframework:spring-web` is the application's dependency.
 
+## Using a LangChain4j HttpClient
+
+Supply an application-built LangChain4j HTTP client and an executor for its
+blocking exchanges:
+
+```java
+import dev.langchain4j.http.client.HttpClientBuilderLoader;
+import java.time.Duration;
+
+var httpClient = HttpClientBuilderLoader.loadHttpClientBuilder()
+        .connectTimeout(Duration.ofSeconds(5))
+        .readTimeout(Duration.ofSeconds(30))
+        .build();
+var client = MemoryClient.create(MemoryClientConfiguration.builder()
+        .langChain4jHttpClient(httpClient, executor)
+        .build());
+```
+
+The client is used as configured, including its logging and network settings.
+LangChain4j 1.0 or later is required; the application supplies
+`dev.langchain4j:langchain4j-http-client` and an implementation such as
+`dev.langchain4j:langchain4j-http-client-jdk`.
+Neither the HTTP client nor the executor is closed, and the last HTTP client
+setter wins.
+
+LangChain4j discards headers on non-2xx responses. Service exceptions retain the
+status and body excerpt but have no response headers or content type, and
+operation events omit `requestId`. Use the Spring adapter when those diagnostics
+matter.
+
 ## Blocking helper and logging
 
 `MemoryClient.await(future)` returns a future's value, including null for a successful void operation. `MemoryClient.await(future, Duration)` supplies a timeout for that call. Both methods are static; importing `org.neo4j.agentmemory.MemoryClient.await` statically lets you write `await(...)` as shown below. Both throw the underlying client exception directly. Other runtime exceptions and errors propagate; checked failures are wrapped in `MemoryClientException` with their cause retained.

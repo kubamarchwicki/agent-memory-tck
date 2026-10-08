@@ -1,0 +1,48 @@
+package org.neo4j.agentmemory.internal.http;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
+
+import dev.langchain4j.exception.HttpException;
+import dev.langchain4j.http.client.HttpClient;
+import dev.langchain4j.http.client.HttpMethod;
+import dev.langchain4j.http.client.HttpRequest;
+import java.util.Map;
+import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
+
+/** Sends blocking exchanges through an application-owned LangChain4j client. */
+public final class LangChain4jHttpTransport implements HttpTransport {
+    private final HttpClient httpClient;
+    private final Executor executor;
+
+    public LangChain4jHttpTransport(HttpClient httpClient, Executor executor) {
+        this.httpClient = httpClient;
+        this.executor = executor;
+    }
+
+    @Override
+    public String name() {
+        return "langchain4j-http";
+    }
+
+    @Override
+    public CompletableFuture<HttpResult> send(HttpCall call) {
+        return CompletableFuture.supplyAsync(() -> {
+            var request = HttpRequest.builder().method(HttpMethod.valueOf(call.method()))
+                    .url(call.uri().toString()).addHeaders(call.headers());
+            if (call.body() != null) {
+                request.body(new String(call.body(), UTF_8));
+            }
+            try {
+                var response = httpClient.execute(request.build());
+                return new HttpResult(response.statusCode(), response.headers(),
+                        Objects.toString(response.body(), "").getBytes(UTF_8));
+            } catch (HttpException failure) {
+                // LangChain4j discards non-success response headers, including content type.
+                return new HttpResult(failure.statusCode(), Map.of(),
+                        Objects.toString(failure.getMessage(), "").getBytes(UTF_8));
+            }
+        }, executor);
+    }
+}
