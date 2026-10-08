@@ -52,7 +52,7 @@ public final class HttpMemoryClient implements MemoryClient {
     }
 
     public static MemoryClient create(MemoryClientConfiguration configuration, HttpTransport transport) {
-        var jsonCodec = JsonCodecs.jackson3();
+        var jsonCodec = JsonCodecs.select();
         var selectedTransport = transport == null
                 ? new JdkHttpTransport(HttpClient.newHttpClient()) : transport;
         return new HttpMemoryClient(configuration.baseUrl(), configuration.apiKey(),
