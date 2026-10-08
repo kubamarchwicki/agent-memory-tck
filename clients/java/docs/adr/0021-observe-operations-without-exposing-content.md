@@ -4,6 +4,13 @@ status: accepted
 
 # Observe operation outcomes without exposing content
 
+> Amended by [ADR 0024](0024-reuse-application-http-clients.md): events use the
+> logger `org.neo4j.agentmemory.MemoryClient`, and initialization names the
+> selected transport. Request ID lookup ignores header-name case for every
+> transport. LangChain4j non-success responses carry no headers, so their
+> events omit `requestId`. A transport's synchronous failure now completes
+> the future exceptionally in the transport phase.
+
 The implemented logging records selected operation metadata rather than payloads: a local call ID shared across client instances in the loaded client classes (not a durable or distributed identifier) correlates start and terminal events, with elapsed time, outcome, observed HTTP status, result counts, and an optional service request ID. Operation events exclude URLs; configuration fallback warnings and initialization log the selected base URL as refined by [ADR 0023](0023-build-validated-client-configuration.md). All events exclude credentials, resource IDs, content, response excerpts, and exception messages or stack traces; failures expose only their phase and unwrapped exception class name. Service request IDs must match `[A-Za-z0-9._:-]{1,128}`, allowing bounded correlation metadata without arbitrary header dumps, and formatted log text remains a diagnostic convention rather than a public event API.
 
 Shared request helpers supply a closure to `ClientLogging.call(operation, action)`. The logging helper starts the operation, invokes the closure synchronously exactly once, observes its original returned future, and records and rethrows synchronous failures without changing their identity. The closure only supplies phase and response metadata; it does not manage logging lifecycle. Observation uses a side-effect callback whose dependent future is ignored, preserving future identity and cancellation behavior. Start timing at shared request-helper entry, include POST encoding, and report success only after status validation, decoding, and domain conversion; DELETE needs only status validation. Record one terminal outcome even when a cancelled future's exchange continues, and correlate through captured operation state rather than thread-local context; cancellation describes the caller's future outcome, not confirmed transport cancellation, and success does not assert extraction or enrichment readiness.

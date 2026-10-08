@@ -22,7 +22,7 @@ Expose collections directly as immutable maps or lists, using empty values for o
 
 ### HTTP and failures
 
-For transport, codecs, dependencies, or failures: [JDK HTTP (0005)](docs/adr/0005-use-jdk-http-without-a-transport-extension.md), superseding 0004; [internal codecs and optional dependencies (0003)](docs/adr/0003-optional-internal-json-adapters.md); [client-owned exceptions (0006)](docs/adr/0006-use-client-owned-exceptions.md).
+For transport, codecs, dependencies, or failures: [application HTTP clients through an internal seam (0024)](docs/adr/0024-reuse-application-http-clients.md), superseding 0005, which superseded 0004; [internal codecs and optional dependencies (0003)](docs/adr/0003-optional-internal-json-adapters.md); [client-owned exceptions (0006)](docs/adr/0006-use-client-owned-exceptions.md).
 
 For HTTP changes, follow [0013](docs/adr/0013-validate-traffic-against-published-openapi.md): validate recorded exchanges synchronously against the [vendored contract](memory-client/src/test/resources/openapi.json), retaining focused behavioral assertions alongside schema checks. The ADR's `docs/openapi.json` path is historical.
 

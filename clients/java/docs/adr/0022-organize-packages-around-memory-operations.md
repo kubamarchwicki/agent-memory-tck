@@ -4,6 +4,13 @@ status: accepted
 
 # Organize packages around memory operations
 
+> Amended by [ADR 0024](0024-reuse-application-http-clients.md): `internal.http`
+> now holds `HttpMemoryClient` (formerly `JdkMemoryClient`), the internal
+> `HttpTransport` seam, and its JDK, Spring `RestClient`, and LangChain4j
+> adapters. `MemoryClientConfiguration` now supplies the configurable HTTP
+> client that is excluded below. The operations logger is now
+> `org.neo4j.agentmemory.MemoryClient`.
+
 MemoryClient defines the complete domain-operation seam, including operations
 addressed by Conversation and Reasoning Step UUIDs. Conversation and ReasoningStep
 remain final live handles bound to a MemoryClient; their public constructors
