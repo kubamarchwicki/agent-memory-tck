@@ -103,6 +103,17 @@
         </dependency>
     </dependencies>
 
+    <profiles>
+        <profile>
+            <id>frameworks-latest</id>
+            <properties>
+                <spring.version>7.0.9</spring.version>
+                <micrometer.version>1.16.7</micrometer.version>
+                <langchain4j.version>1.22.0</langchain4j.version>
+            </properties>
+        </profile>
+    </profiles>
+
     <build>
         <plugins>
             <plugin>

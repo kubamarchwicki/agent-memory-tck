@@ -310,6 +310,25 @@ With the package at INFO and root at WARN, only the INFO and WARNING probes appe
 </dependency>
 ```
 
+The default JDK client needs neither Spring nor LangChain4j. Add the corresponding optional application dependency only when injecting that framework's client:
+
+```xml
+<!-- Spring Framework 7.0+ -->
+<dependency>
+  <groupId>org.springframework</groupId>
+  <artifactId>spring-web</artifactId>
+  <version>7.0.9</version>
+</dependency>
+<!-- LangChain4j 1.0+ -->
+<dependency>
+  <groupId>dev.langchain4j</groupId>
+  <artifactId>langchain4j-http-client</artifactId>
+  <version>1.22.0</version>
+</dependency>
+```
+
+The contract suite verifies Spring Framework 7.0.0 through 7.0.9 (Micrometer 1.16.0 through 1.16.7) and LangChain4j 1.0.0 through 1.22.0 at both endpoints. Reflecting over `MemoryClientConfiguration.Builder` methods requires both frameworks on the classpath; otherwise it throws `NoClassDefFoundError`.
+
 These coordinates alone do not imply a published artifact. The supported handoff is a reachable, exact Git commit and a source build before downstream CI resolves the snapshot. From a clean checkout of the supplied commit, with Java 17+ and Maven available:
 
 ```bash

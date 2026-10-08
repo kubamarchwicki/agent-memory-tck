@@ -21,6 +21,49 @@ import org.neo4j.agentmemory.testsupport.EnvironmentProbe;
 @WireMockTest
 class MemoryClientFactoryTest {
     @Test
+    void defaultClientRunsWithoutSpringOrLangChain4j(WireMockRuntimeInfo server) throws Exception {
+        var response = OpenApiContract.response("get", "/v1/conversations/{id}");
+        var id = UUID.fromString(tools.jackson.databind.json.JsonMapper.builder().build()
+                .readTree(response.build().getBody()).get("id").asString());
+        stubFor(get(urlEqualTo("/v1/conversations/" + id)).willReturn(response));
+
+        var output = EnvironmentProbe.runOnClasspath(
+                EnvironmentProbe.classpathWithout("spring-", "langchain4j-", "micrometer-"),
+                FrameworkFreeProbe.class,
+                Map.of("NAMS_API_KEY", "workspace-key", "NAMS_BASE_URL", server.getHttpBaseUrl() + "/v1"),
+                id.toString());
+
+        assertThat(output.lines()).contains("spring=absent", "langchain4j=absent",
+                "conversation=" + id, "builderReflection=NoClassDefFoundError");
+        verify(getRequestedFor(urlEqualTo("/v1/conversations/" + id))
+                .withHeader("Authorization", equalTo("Bearer workspace-key")));
+        OpenApiContract.assertEveryExchangeMatchesTheContract();
+        OpenApiContract.assertOnlyDeclaredRequestProperties();
+    }
+
+    public static class FrameworkFreeProbe {
+        public static void main(String[] args) throws Exception {
+            try {
+                Class.forName("org.springframework.web.client.RestClient");
+            } catch (ClassNotFoundException absent) {
+                System.out.println("spring=absent");
+            }
+            try {
+                Class.forName("dev.langchain4j.http.client.HttpClient");
+            } catch (ClassNotFoundException absent) {
+                System.out.println("langchain4j=absent");
+            }
+            System.out.println("conversation=" + MemoryClient.create()
+                    .getConversation(UUID.fromString(args[0])).join().id());
+            try {
+                MemoryClientConfiguration.Builder.class.getDeclaredMethods();
+            } catch (NoClassDefFoundError absent) {
+                System.out.println("builderReflection=NoClassDefFoundError");
+            }
+        }
+    }
+
+    @Test
     void usesTheConfiguredJdkHttpClient(WireMockRuntimeInfo server) {
         var executions = new AtomicInteger();
         var pool = Executors.newCachedThreadPool();

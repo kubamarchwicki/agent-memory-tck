@@ -2,7 +2,10 @@ package org.neo4j.agentmemory.testsupport;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.io.File;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+import java.util.stream.Collectors;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -15,9 +18,22 @@ public final class EnvironmentProbe {
 
     public static String run(Class<?> mainClass, Map<String, String> environment, String... arguments)
             throws Exception {
+        return runOnClasspath(System.getProperty("java.class.path"), mainClass, environment, arguments);
+    }
+
+    public static String classpathWithout(String... fileNamePrefixes) {
+        var classpath = System.getProperty("surefire.test.class.path", System.getProperty("java.class.path"));
+        return Arrays.stream(classpath.split(java.util.regex.Pattern.quote(File.pathSeparator)))
+                .filter(entry -> Arrays.stream(fileNamePrefixes)
+                        .noneMatch(prefix -> Path.of(entry).getFileName().toString().startsWith(prefix)))
+                .collect(Collectors.joining(File.pathSeparator));
+    }
+
+    public static String runOnClasspath(String classpath, Class<?> mainClass,
+            Map<String, String> environment, String... arguments) throws Exception {
         var command = new ArrayList<>(List.of(
                 Path.of(System.getProperty("java.home"), "bin", "java").toString(),
-                "-cp", System.getProperty("java.class.path"), mainClass.getName()));
+                "-cp", classpath, mainClass.getName()));
         command.addAll(List.of(arguments));
         var builder = new ProcessBuilder(command).redirectErrorStream(true);
         builder.environment().remove("NAMS_BASE_URL");
