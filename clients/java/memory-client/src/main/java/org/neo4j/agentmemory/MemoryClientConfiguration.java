@@ -5,6 +5,9 @@ import java.net.http.HttpClient;
 import org.neo4j.agentmemory.internal.http.HttpTransport;
 import org.neo4j.agentmemory.internal.http.JdkHttpTransport;
 import java.util.Objects;
+import java.util.concurrent.Executor;
+import org.neo4j.agentmemory.internal.http.RestClientHttpTransport;
+import org.springframework.web.client.RestClient;
 
 /**
  * Immutable settings for constructing a hosted memory client.
@@ -90,6 +93,27 @@ public final class MemoryClientConfiguration {
          */
         public Builder jdkHttpClient(HttpClient httpClient) {
             this.httpTransport = new JdkHttpTransport(Objects.requireNonNull(httpClient, "httpClient"));
+            return this;
+        }
+
+        /**
+         * Uses an application-built Spring client. Its interceptors, observation
+         * registry, request-factory timeouts, and TLS settings apply. Its base URL
+         * and status handlers do not apply to memory requests. Explicit memory
+         * headers override corresponding defaults; unrelated default headers remain.
+         * Blocking exchanges run on executor; neither the client nor the executor
+         * is closed. Requires Spring Framework 7.0 or later.
+         * Replaces any HTTP client set earlier.
+         *
+         * @param restClient the application Spring client
+         * @param executor the application executor for blocking exchanges
+         * @return this builder
+         * @throws NullPointerException if restClient or executor is null
+         */
+        public Builder restClient(RestClient restClient, Executor executor) {
+            this.httpTransport = new RestClientHttpTransport(
+                    Objects.requireNonNull(restClient, "restClient"),
+                    Objects.requireNonNull(executor, "executor"));
             return this;
         }
 

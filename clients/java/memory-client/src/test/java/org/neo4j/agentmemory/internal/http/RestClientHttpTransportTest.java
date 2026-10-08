@@ -1,0 +1,106 @@
+package org.neo4j.agentmemory.internal.http;
+
+import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.get;
+import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.verify;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.catchThrowable;
+
+import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
+import com.github.tomakehurst.wiremock.junit5.WireMockTest;
+import io.micrometer.observation.tck.TestObservationRegistry;
+import io.micrometer.observation.tck.TestObservationRegistryAssert;
+import java.util.UUID;
+import org.junit.jupiter.api.Test;
+import org.neo4j.agentmemory.MemoryClient;
+import org.neo4j.agentmemory.MemoryClientConfiguration;
+import org.neo4j.agentmemory.exception.MemoryServiceException;
+import org.neo4j.agentmemory.testsupport.HttpClientUnderTest;
+import org.springframework.http.HttpStatusCode;
+import org.springframework.http.client.JdkClientHttpRequestFactory;
+import org.springframework.web.client.RestClient;
+
+@WireMockTest
+class RestClientHttpTransportTest {
+    private static final UUID ID = UUID.fromString("a2f55d70-838f-4c41-ae7d-dad30fd25720");
+    private static final String PATH = "/v1/conversations/" + ID;
+
+    @Test
+    void observationsTagTheRouteTemplate(WireMockRuntimeInfo server) {
+        var registry = TestObservationRegistry.create();
+        var restClient = builder().observationRegistry(registry).build();
+        stubConversation();
+
+        client(server, restClient).getConversation(ID).join();
+
+        TestObservationRegistryAssert.assertThat(registry)
+                .hasObservationWithNameEqualTo("http.client.requests").that()
+                .hasLowCardinalityKeyValue("uri", "/v1/conversations/{conversationId}");
+    }
+
+    @Test
+    void runsApplicationInterceptors(WireMockRuntimeInfo server) {
+        var restClient = builder().requestInterceptor((request, body, execution) -> {
+            request.getHeaders().set("X-App-Trace", "trace-1");
+            return execution.execute(request, body);
+        }).build();
+        stubConversation();
+
+        client(server, restClient).getConversation(ID).join();
+
+        verify(getRequestedFor(urlEqualTo(PATH)).withHeader("X-App-Trace", equalTo("trace-1")));
+    }
+
+    @Test
+    void overridesRestClientBaseUrlAndCorrespondingDefaultHeaders(WireMockRuntimeInfo server) {
+        var restClient = builder().baseUrl("http://wrong.invalid/api")
+                .defaultHeader("Authorization", "Bearer app-token")
+                .defaultHeader("Accept", "application/xml")
+                .defaultHeader("X-App-Tenant", "tenant-1").build();
+        stubConversation();
+
+        client(server, restClient).getConversation(ID).join();
+
+        verify(getRequestedFor(urlEqualTo(PATH))
+                .withHeader("Authorization", equalTo("Bearer nams-key"))
+                .withHeader("Accept", equalTo("application/json"))
+                .withHeader("X-App-Tenant", equalTo("tenant-1")));
+    }
+
+    @Test
+    void bypassesRestClientStatusHandlers(WireMockRuntimeInfo server) {
+        var restClient = builder().defaultStatusHandler(HttpStatusCode::isError, (request, response) -> {
+            throw new IllegalStateException("application status handler");
+        }).build();
+        stubFor(get(urlEqualTo(PATH)).willReturn(aResponse().withStatus(503)
+                .withHeader("X-Request-ID", "req-503")));
+
+        var failure = catchThrowable(() -> client(server, restClient).getConversation(ID).join());
+
+        assertThat(failure).hasCauseInstanceOf(MemoryServiceException.class);
+        var serviceFailure = (MemoryServiceException) failure.getCause();
+        assertThat(serviceFailure.statusCode()).isEqualTo(503);
+        assertThat(serviceFailure.responseHeaders().keySet())
+                .anyMatch(name -> name.equalsIgnoreCase("x-request-id"));
+    }
+
+    private static RestClient.Builder builder() {
+        return RestClient.builder().requestFactory(new JdkClientHttpRequestFactory());
+    }
+
+    private static MemoryClient client(WireMockRuntimeInfo server, RestClient restClient) {
+        return MemoryClient.create(MemoryClientConfiguration.builder()
+                .baseUrl(server.getHttpBaseUrl() + "/v1").apiKey("nams-key")
+                .restClient(restClient, HttpClientUnderTest.TEST_EXECUTOR).build());
+    }
+
+    private static void stubConversation() {
+        stubFor(get(urlEqualTo(PATH)).willReturn(aResponse()
+                .withHeader("Content-Type", "application/json")
+                .withBody("{\"id\":\"" + ID + "\"}")));
+    }
+}

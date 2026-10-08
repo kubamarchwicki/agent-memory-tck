@@ -14,6 +14,16 @@ import org.neo4j.agentmemory.testsupport.EnvironmentProbe;
 
 class MemoryClientConfigurationTest {
     @Test
+    void rejectsNullRestClientArguments() {
+        assertThatThrownBy(() -> MemoryClientConfiguration.builder()
+                .restClient(null, org.neo4j.agentmemory.testsupport.HttpClientUnderTest.TEST_EXECUTOR))
+                .isInstanceOf(NullPointerException.class).hasMessage("restClient");
+        assertThatThrownBy(() -> MemoryClientConfiguration.builder()
+                .restClient(org.springframework.web.client.RestClient.create(), null))
+                .isInstanceOf(NullPointerException.class).hasMessage("executor");
+    }
+
+    @Test
     void rejectsNullJdkHttpClient() {
         assertThatThrownBy(() -> MemoryClientConfiguration.builder().jdkHttpClient(null))
                 .isInstanceOf(NullPointerException.class).hasMessage("httpClient");

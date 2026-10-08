@@ -1,6 +1,6 @@
 # Neo4j Agent Memory Java client
 
-This Java 17 client accesses the hosted Neo4j Agent Memory Service. The core artifact is `org.neo4j:agent-memory-client:0.1.0-SNAPSHOT`. It uses the JDK HTTP client and an optional Jackson 3 JSON adapter; applications must provide Jackson 3 at runtime. It has no application framework dependency.
+This Java 17 client accesses the hosted Neo4j Agent Memory Service. The core artifact is `org.neo4j:agent-memory-client:0.1.0-SNAPSHOT`. It uses the JDK HTTP client by default and can reuse an application's Spring `RestClient` or LangChain4j `HttpClient`. The framework dependencies are optional. Applications must provide Jackson 3 at runtime for the optional JSON adapter.
 
 ## Public API
 
@@ -130,6 +130,33 @@ var latest = conversation.messages(1).get(20, TimeUnit.SECONDS);
 ```
 
 Caller-side timed waits do not establish transport cancellation. The client performs no automatic write retries.
+
+## Using a Spring RestClient
+
+Supply an application-built `RestClient` and an executor for its blocking exchanges.
+For example, in Spring Boot:
+
+```java
+@Bean
+MemoryClient memoryClient(RestClient.Builder restClientBuilder, AsyncTaskExecutor applicationTaskExecutor) {
+    return MemoryClient.create(MemoryClientConfiguration.builder()
+            .restClient(restClientBuilder.build(), applicationTaskExecutor)
+            .build());
+}
+```
+
+The client's interceptors, observation registry, request-factory timeouts, and TLS
+settings apply. Observations are tagged with route templates such as
+`/v1/conversations/{conversationId}`. The memory configuration supplies the
+absolute service URLs and explicit memory headers. The RestClient's base URL
+and status handlers do not apply. Explicit memory headers override corresponding
+defaults; unrelated default headers remain. Non-success responses retain
+their headers and are mapped to the memory client's exceptions.
+
+Blocking exchanges run on the supplied executor. The memory client closes
+neither the RestClient nor the executor, and the last HTTP client setter wins.
+Spring Framework 7.0 or later is required (Spring Boot 4, Spring AI 2.x).
+`org.springframework:spring-web` is the application's dependency.
 
 ## Blocking helper and logging
 
