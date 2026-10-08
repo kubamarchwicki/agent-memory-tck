@@ -113,7 +113,7 @@ class MemoryClientFactoryTest {
     @Test
     void factoriesUseDefaultUrlForAbsentOrBlankConfiguration() throws Exception {
         assertThat(probe(Map.of("NAMS_API_KEY", "workspace-key"), "create"))
-                .contains("constructed", "event=client.initialized transport=jdk-http baseUrl=https://memory.neo4jlabs.com/v1")
+                .contains("constructed", "event=client.initialized transport=jdk-http json=jackson3 baseUrl=https://memory.neo4jlabs.com/v1")
                 .doesNotContain("workspace-key");
         assertThat(probe(Map.of("NAMS_API_KEY", "workspace-key", "NAMS_BASE_URL", " \t"),
                 "create")).contains("constructed");

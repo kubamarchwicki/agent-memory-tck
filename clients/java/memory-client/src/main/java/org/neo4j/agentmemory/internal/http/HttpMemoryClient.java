@@ -48,7 +48,7 @@ public final class HttpMemoryClient implements MemoryClient {
         this.transport = transport;
         this.jsonCodec = jsonCodec;
         this.logging = logging;
-        logging.initialized(endpoint, transport.name());
+        logging.initialized(endpoint, transport.name(), jsonCodec.name());
     }
 
     public static MemoryClient create(MemoryClientConfiguration configuration, HttpTransport transport) {

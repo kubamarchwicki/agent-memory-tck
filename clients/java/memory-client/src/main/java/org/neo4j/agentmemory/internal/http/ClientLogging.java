@@ -29,8 +29,8 @@ final class ClientLogging {
 
     ClientLogging(System.Logger logger) { this.logger = logger; }
 
-    void initialized(URI baseUrl, String transport) {
-        emit(System.Logger.Level.INFO, () -> "event=client.initialized transport=" + transport + " baseUrl=" + baseUrl);
+    void initialized(URI baseUrl, String transport, String json) {
+        emit(System.Logger.Level.INFO, () -> "event=client.initialized transport=" + transport + " json=" + json + " baseUrl=" + baseUrl);
     }
 
     <T> CompletableFuture<T> call(String operation, Function<Operation, CompletableFuture<T>> action) {
