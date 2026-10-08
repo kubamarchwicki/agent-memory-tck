@@ -16,7 +16,8 @@
 
     <properties>
         <assertj.version>3.27.7</assertj.version>
-        <jackson.version>3.1.5</jackson.version>
+        <jackson3.version>3.1.4</jackson3.version>
+        <jackson2.version>2.19.0</jackson2.version>
         <langchain4j.version>1.0.0</langchain4j.version>
         <junit.version>5.14.4</junit.version>
         <logback.version>1.5.38</logback.version>
@@ -50,7 +51,13 @@
         <dependency>
             <groupId>tools.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
-            <version>${jackson.version}</version>
+            <version>${jackson3.version}</version>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>${jackson2.version}</version>
             <optional>true</optional>
         </dependency>
         <dependency>
