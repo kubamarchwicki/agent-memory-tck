@@ -7,11 +7,19 @@ import java.net.URI;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.NullAndEmptySource;
+import org.junit.jupiter.params.provider.EmptySource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.neo4j.agentmemory.testsupport.EnvironmentProbe;
 
 class MemoryClientConfigurationTest {
+    @Test
+    void rejectsNullOverridesInSetters() {
+        assertThatThrownBy(() -> MemoryClientConfiguration.builder().apiKey(null))
+                .isInstanceOf(NullPointerException.class).hasMessage("apiKey");
+        assertThatThrownBy(() -> MemoryClientConfiguration.builder().baseUrl(null))
+                .isInstanceOf(NullPointerException.class).hasMessage("baseUrl");
+    }
+
     @Test
     void buildsConfigurationWithExplicitValues() {
         var configuration = MemoryClientConfiguration.builder()
@@ -24,9 +32,9 @@ class MemoryClientConfigurationTest {
     }
 
     @ParameterizedTest
-    @NullAndEmptySource
+    @EmptySource
     @ValueSource(strings = {" ", "\t"})
-    void rejectsMissingOrBlankKeyWhenBuilding(String apiKey) {
+    void rejectsBlankKeyWhenBuilding(String apiKey) {
         var builder = MemoryClientConfiguration.builder().baseUrl("https://memory.test/v1").apiKey(apiKey);
         assertThatThrownBy(builder::build)
                 .isInstanceOf(IllegalArgumentException.class)
@@ -34,7 +42,7 @@ class MemoryClientConfigurationTest {
     }
 
     @ParameterizedTest
-    @NullAndEmptySource
+    @EmptySource
     @ValueSource(strings = {" ", "not a URL", "/v1", "ftp://memory.test/v1", "https:///v1",
             "https://user:password@memory.test/v1", "https://memory.test/v1?key=secret",
             "https://memory.test/v1#fragment"})
@@ -49,7 +57,8 @@ class MemoryClientConfigurationTest {
     void emptyBuilderResolvesEnvironmentWhenBuilt() throws Exception {
         assertThat(EnvironmentProbe.run(ConfigurationProbe.class,
                 Map.of("NAMS_API_KEY", "environment-key", "NAMS_BASE_URL", "  https://environment.test/v1  ")))
-                .contains("https://environment.test/v1", "key-matches=true");
+                .contains("https://environment.test/v1", "key-matches=true")
+                .doesNotContain(" WARN ");
     }
 
     @Test
@@ -57,14 +66,16 @@ class MemoryClientConfigurationTest {
         for (var environment : java.util.List.of(Map.of("NAMS_API_KEY", "environment-key"),
                 Map.of("NAMS_API_KEY", "environment-key", "NAMS_BASE_URL", " \t"))) {
             assertThat(EnvironmentProbe.run(ConfigurationProbe.class, environment))
-                    .contains("https://memory.neo4jlabs.com/v1", "key-matches=true");
+                    .contains("https://memory.neo4jlabs.com/v1", "key-matches=true", " WARN ",
+                            "NAMS_BASE_URL is absent or blank; using default base URL")
+                    .doesNotContain("environment-key");
         }
     }
 
     @Test
     void validatesEnvironmentDuringBuild() throws Exception {
         assertThat(EnvironmentProbe.run(ConfigurationProbe.class, Map.of()))
-                .contains("apiKey must not be blank");
+                .contains("apiKey must not be blank").doesNotContain(" WARN ");
         assertThat(EnvironmentProbe.run(ConfigurationProbe.class, Map.of("NAMS_API_KEY", " \t")))
                 .contains("apiKey must not be blank");
         assertThat(EnvironmentProbe.run(ConfigurationProbe.class,

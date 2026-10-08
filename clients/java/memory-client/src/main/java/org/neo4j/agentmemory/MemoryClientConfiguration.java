@@ -1,6 +1,7 @@
 package org.neo4j.agentmemory;
 
 import java.net.URI;
+import java.util.Objects;
 
 /**
  * Immutable settings for constructing a hosted memory client.
@@ -9,6 +10,7 @@ import java.net.URI;
  * Admin keys with an explicit workspace ID are not yet supported.
  */
 public final class MemoryClientConfiguration {
+    private static final String DEFAULT_BASE_URL = "https://memory.neo4jlabs.com/v1";
     private final URI baseUrl;
     private final String apiKey;
 
@@ -36,36 +38,34 @@ public final class MemoryClientConfiguration {
     public static final class Builder {
         private String baseUrl;
         private String apiKey;
-        private boolean baseUrlSet;
-        private boolean apiKeySet;
 
         private Builder() {}
 
         /**
          * Overrides NAMS_BASE_URL with a service URL including its version path.
          * Leading and trailing whitespace is trimmed when building; a trailing
-         * slash is supported. Explicit null or blank values are invalid.
+         * slash is supported. Null is rejected immediately; blank values fail in build().
          *
          * @param baseUrl an absolute HTTP(S) URL with a host and no user info,
          *        query, or fragment
          * @return this builder
+         * @throws NullPointerException if baseUrl is null
          */
         public Builder baseUrl(String baseUrl) {
-            this.baseUrl = baseUrl;
-            this.baseUrlSet = true;
+            this.baseUrl = Objects.requireNonNull(baseUrl, "baseUrl");
             return this;
         }
 
         /**
          * Overrides NAMS_API_KEY with a Workspace API key.
-         * Explicit null or blank values are invalid.
+         * Null is rejected immediately; blank values fail in build().
          *
          * @param apiKey the nonblank Workspace API key
          * @return this builder
+         * @throws NullPointerException if apiKey is null
          */
         public Builder apiKey(String apiKey) {
-            this.apiKey = apiKey;
-            this.apiKeySet = true;
+            this.apiKey = Objects.requireNonNull(apiKey, "apiKey");
             return this;
         }
 
@@ -73,7 +73,8 @@ public final class MemoryClientConfiguration {
          * Resolves omitted settings from NAMS_API_KEY and NAMS_BASE_URL and
          * validates them without creating a client or making a remote request.
          * An absent or blank environment base URL defaults to
-         * https://memory.neo4jlabs.com/v1. The key is required.
+         * https://memory.neo4jlabs.com/v1 and emits a WARNING through System.Logger.
+         * The key is required.
          *
          * @return a new immutable configuration, independent of later builder changes
          * @throws IllegalArgumentException if the key is null or blank, or the
@@ -81,21 +82,22 @@ public final class MemoryClientConfiguration {
          *         user info, query, or fragment
          */
         public MemoryClientConfiguration build() {
-            var resolvedKey = apiKeySet ? apiKey : System.getenv("NAMS_API_KEY");
-            var resolvedUrl = baseUrlSet ? baseUrl : System.getenv("NAMS_BASE_URL");
-            if (!baseUrlSet && (resolvedUrl == null || resolvedUrl.isBlank())) {
-                resolvedUrl = "https://memory.neo4jlabs.com/v1";
-            }
+            var resolvedKey = apiKey != null ? apiKey : System.getenv("NAMS_API_KEY");
+            var resolvedUrl = baseUrl != null ? baseUrl : System.getenv("NAMS_BASE_URL");
             if (resolvedKey == null || resolvedKey.isBlank()) {
                 throw new IllegalArgumentException("apiKey must not be blank");
             }
+            if (baseUrl == null && (resolvedUrl == null || resolvedUrl.isBlank())) {
+                resolvedUrl = DEFAULT_BASE_URL;
+                logDefaultBaseUrl();
+            }
             URI url;
             try {
-                url = resolvedUrl == null ? null : URI.create(resolvedUrl.trim());
+                url = URI.create(resolvedUrl.trim());
             } catch (IllegalArgumentException invalidUrl) {
                 throw invalidBaseUrl();
             }
-            if (url == null || url.getHost() == null
+            if (url.getHost() == null
                     || !("https".equalsIgnoreCase(url.getScheme()) || "http".equalsIgnoreCase(url.getScheme()))
                     || url.getRawUserInfo() != null || url.getRawQuery() != null || url.getRawFragment() != null) {
                 throw invalidBaseUrl();
@@ -106,6 +108,15 @@ public final class MemoryClientConfiguration {
         private static IllegalArgumentException invalidBaseUrl() {
             return new IllegalArgumentException(
                     "baseUrl must be an absolute HTTP(S) URL without user info, query, or fragment");
+        }
+
+        private static void logDefaultBaseUrl() {
+            try {
+                System.getLogger(MemoryClientConfiguration.class.getName()).log(System.Logger.Level.WARNING,
+                        "NAMS_BASE_URL is absent or blank; using default base URL " + DEFAULT_BASE_URL);
+            } catch (RuntimeException ignored) {
+                // Logging has no effect on configuration validation.
+            }
         }
     }
 }

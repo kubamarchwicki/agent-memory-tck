@@ -235,7 +235,7 @@ class MemoryClientLoggingTest {
         assertThat(success.lines().filter(line -> line.contains("event=client.initialized"))).hasSize(1);
         assertThat(success).contains("baseUrl=https://memory.test/v1").doesNotContain("operation.started", "probe-key");
         assertThat(probe(classpath, "blank-key")).contains("IllegalArgumentException").doesNotContain("client.initialized");
-        assertThat(probe(classpath, "null-endpoint")).contains("IllegalArgumentException").doesNotContain("client.initialized");
+        assertThat(probe(classpath, "null-endpoint")).contains("NullPointerException").doesNotContain("client.initialized");
         var restricted = Path.of(MemoryClient.class.getProtectionDomain().getCodeSource().getLocation().toURI())
                 + File.pathSeparator
                 + Path.of(FactoryProbe.class.getProtectionDomain().getCodeSource().getLocation().toURI());
@@ -377,7 +377,7 @@ class MemoryClientLoggingTest {
                             .baseUrl("https://memory.test/v1").apiKey("probe-key").build());
                 }
                 System.out.println("constructed");
-            } catch (IllegalArgumentException | MissingJsonCodecException failure) {
+            } catch (IllegalArgumentException | NullPointerException | MissingJsonCodecException failure) {
                 System.out.println(failure.getClass().getSimpleName());
             }
         }

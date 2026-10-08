@@ -7,7 +7,8 @@ This Java 17 client accesses the hosted Neo4j Agent Memory Service. The core art
 `MemoryClient.create()` uses `MemoryClientConfiguration.builder().build()`.
 The builder resolves environment settings and validates them when `build()` is
 called. `NAMS_API_KEY` must contain a nonblank Workspace API key. `NAMS_BASE_URL`
-is optional: an absent or blank value uses `https://memory.neo4jlabs.com/v1`.
+is optional: an absent or blank value uses `https://memory.neo4jlabs.com/v1`
+and emits a WARN identifying the default URL on each successful build.
 
 The only other factory is `MemoryClient.create(MemoryClientConfiguration)`.
 Use the fluent builder to override either setting; omitted settings still come
@@ -25,11 +26,12 @@ var client = MemoryClient.create(configuration);
 ```
 
 `apiKey(String)` and `baseUrl(String)` override their environment variables.
-Explicit null or blank values fail validation rather than falling back to the
-environment. Base URLs are trimmed and must be absolute HTTP(S) URLs with a host,
+Setters reject explicit null values immediately with `NullPointerException`.
+Explicit blank values fail validation in `build()` rather than falling back to
+the environment. Base URLs are trimmed and must be absolute HTTP(S) URLs with a host,
 without user info, a query, or a fragment. Include the service's version path;
-a trailing slash is supported. Invalid settings throw `IllegalArgumentException`
-from `build()`. The built configuration is immutable and exposes `URI baseUrl()`
+a trailing slash is supported. Invalid environment settings or nonnull overrides throw
+`IllegalArgumentException` from `build()`. The built configuration is immutable and exposes `URI baseUrl()`
 and `String apiKey()`. Reusing a builder does not change earlier configurations.
 
 Both factories construct the default JDK HTTP adapter without checking remote
@@ -140,7 +142,7 @@ public final class ReadConversationMessages {
 }
 ```
 
-The client uses JDK `System.Logger`: `org.neo4j.agentmemory.JdkMemoryClient` for initialization and operations, and `org.neo4j.agentmemory.AwaitSupport` for await configuration. To capture these events with Logback, add the JDK Platform Logging bridge and Logback backend to the **application's** dependencies. The bridge routes `System.Logger` through SLF4J. [SLF4J documents the bridge here](https://www.slf4j.org/manual.html#jep264).
+The client uses JDK `System.Logger`: `org.neo4j.agentmemory.JdkMemoryClient` for initialization and operations, `org.neo4j.agentmemory.MemoryClientConfiguration` for the default base URL warning, and `org.neo4j.agentmemory.AwaitSupport` for await configuration. To capture these events with Logback, add the JDK Platform Logging bridge and Logback backend to the **application's** dependencies. The bridge routes `System.Logger` through SLF4J. [SLF4J documents the bridge here](https://www.slf4j.org/manual.html#jep264).
 
 ```xml
 <dependency>
@@ -181,7 +183,7 @@ The package entry admits initialization and fallback INFO events even with a WAR
 | --- | --- |
 | DEBUG | Operation starts and terminal success, failure, or cancellation, including HTTP 4xx/5xx and encoding, transport, and decoding failures |
 | INFO | Successful local client construction; once-only absent or blank default-await setting fallback |
-| WARNING | Once-only invalid default-await setting fallback |
+| WARNING | Default base URL selection on each configuration build; once-only invalid default-await setting fallback |
 | ERROR | None currently; applications own reporting of returned exceptions |
 
 `event=client.initialized transport=jdk-http baseUrl=https://memory.neo4jlabs.com/v1` means local construction succeeded and identifies the configured service URL. It does not establish service reachability or authentication. Operation timing starts at shared request-helper entry, includes POST encoding, and ends after HTTP status validation, decoding, and domain conversion (status validation alone for DELETE). Success does not establish extraction or enrichment readiness. Synchronous validation before helper entry emits no operation event.
@@ -197,7 +199,7 @@ event=operation.completed operation=getConversation callId=8 outcome=failure dur
 
 `callId` is a local counter shared across client instances in the loaded client classes; it is not a durable or distributed identifier. Terminal events carry elapsed `durationMs`, outcome, observed HTTP `status` when available, and optional result counts. Lists use `resultCount`; context uses `reflectionCount`, `observationCount`, and `messageCount`; traces use `stepCount` and `toolCallCount`; explanations use `toolCallCount` and `entityCount`. Failures and cancellations carry a phase (`encode`, `request`, `transport`, `http`, or `decode`) and the unwrapped exception's simple class name in `errorType`.
 
-An optional `requestId` comes from the first available `x-request-id`, `request-id`, or `x-amzn-requestid` response header, in that order, and is emitted only when it matches `[A-Za-z0-9._:-]{1,128}`. Initialization includes the configured base URL. Operation events exclude URLs; all events exclude credentials, resource IDs, message and reasoning content, tool payloads, response excerpts, and exception messages or stack traces. Field text is a diagnostic convention, not a public event API.
+An optional `requestId` comes from the first available `x-request-id`, `request-id`, or `x-amzn-requestid` response header, in that order, and is emitted only when it matches `[A-Za-z0-9._:-]{1,128}`. Configuration fallback warnings and initialization include the selected base URL. Operation events exclude URLs; all events exclude credentials, resource IDs, message and reasoning content, tool payloads, response excerpts, and exception messages or stack traces. Field text is a diagnostic convention, not a public event API.
 
 Cancellation describes the returned future's outcome, without confirming transport cancellation. An await timeout or interruption leaves the supplied future running and emits no extra operation failure; `await` also avoids reporting propagated failures again. Operations retain the original returned future and exception behavior. Ordinary logger runtime failures are isolated from operation results, while fatal errors are not swallowed. A caller can observe future completion before its terminal logging callback finishes: `join()` does not flush logging. Threshold changes can suppress one event of a pair, and configuring a backend does not guarantee delivery.
 
