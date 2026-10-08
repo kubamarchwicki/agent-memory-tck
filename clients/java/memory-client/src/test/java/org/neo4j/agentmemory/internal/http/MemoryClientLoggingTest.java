@@ -180,6 +180,7 @@ class MemoryClientLoggingTest {
     void encodingFailureRemainsAsynchronousAndKeepsCause(WireMockRuntimeInfo server) throws Exception {
         var original = new IllegalArgumentException("encode-secret");
         JsonCodec codec = new JsonCodec() {
+            public String name() { return "jackson3"; }
             public byte[] encode(Object value) { throw original; }
             public <T> T decode(byte[] json, Class<T> type) { return new Jackson3JsonCodec().decode(json, type); }
         };

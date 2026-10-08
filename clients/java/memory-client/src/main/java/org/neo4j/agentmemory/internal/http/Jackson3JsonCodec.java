@@ -27,6 +27,11 @@ final class Jackson3JsonCodec implements JsonCodec {
     }
 
     @Override
+    public String name() {
+        return "jackson3";
+    }
+
+    @Override
     public byte[] encode(Object wireValue) {
         try {
             return mapper.writeValueAsBytes(wireValue);
@@ -42,11 +47,5 @@ final class Jackson3JsonCodec implements JsonCodec {
         } catch (JacksonException failure) {
             throw new JsonCodecException("Could not decode JSON", failure);
         }
-    }
-}
-
-final class JsonCodecException extends RuntimeException {
-    JsonCodecException(String message, Throwable cause) {
-        super(message, cause);
     }
 }
