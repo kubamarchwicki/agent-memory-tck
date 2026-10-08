@@ -5,6 +5,11 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 
 import java.util.Map;
+import java.net.http.HttpClient;
+import java.util.UUID;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.TimeUnit;
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
@@ -15,6 +20,31 @@ import org.neo4j.agentmemory.testsupport.EnvironmentProbe;
 
 @WireMockTest
 class MemoryClientFactoryTest {
+    @Test
+    void usesTheConfiguredJdkHttpClient(WireMockRuntimeInfo server) {
+        var executions = new AtomicInteger();
+        var pool = Executors.newCachedThreadPool();
+        Executor counting = command -> {
+            executions.incrementAndGet();
+            pool.execute(command);
+        };
+        try {
+            var id = UUID.randomUUID();
+            stubFor(get(urlEqualTo("/v1/conversations/" + id))
+                    .willReturn(OpenApiContract.response("get", "/v1/conversations/{id}")));
+            var client = MemoryClient.create(MemoryClientConfiguration.builder()
+                    .baseUrl(server.getHttpBaseUrl() + "/v1").apiKey("workspace-key")
+                    .jdkHttpClient(HttpClient.newBuilder().executor(counting).build()).build());
+
+            assertThat(client.getConversation(id).join().id()).isNotNull();
+            assertThat(executions.get()).isGreaterThan(0);
+            OpenApiContract.assertEveryExchangeMatchesTheContract();
+            OpenApiContract.assertOnlyDeclaredRequestProperties();
+        } finally {
+            pool.shutdownNow();
+        }
+    }
+
     @Test
     void environmentFactoryUsesConfiguredUrlAndWorkspaceApiKey(WireMockRuntimeInfo server) throws Exception {
         stubFor(get(urlEqualTo("/v1/conversations?limit=10"))

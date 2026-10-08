@@ -1,5 +1,8 @@
 package org.neo4j.agentmemory;
 
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.EnumSource;
+import org.neo4j.agentmemory.testsupport.HttpClientUnderTest;
 import org.neo4j.agentmemory.conversation.Conversation;
 import org.neo4j.agentmemory.conversation.CreateConversation;
 import org.neo4j.agentmemory.conversation.ListConversations;
@@ -29,7 +32,15 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+@ParameterizedClass
+@EnumSource(HttpClientUnderTest.class)
 class MemoryClientContractTest {
+    private final HttpClientUnderTest httpClient;
+
+    MemoryClientContractTest(HttpClientUnderTest httpClient) {
+        this.httpClient = httpClient;
+    }
+
     @RegisterExtension
     static final WireMockExtension WIRE_MOCK = WireMockExtension.newInstance()
             .options(wireMockConfig().dynamicPort())
@@ -40,8 +51,8 @@ class MemoryClientContractTest {
 
     @BeforeEach
     void startFromACleanContract() {
-        client = MemoryClient.create(MemoryClientConfiguration.builder()
-                .baseUrl(WIRE_MOCK.baseUrl() + "/v1").apiKey("nams_contract-test-key").build());
+        client = MemoryClient.create(httpClient.configure(MemoryClientConfiguration.builder()
+                .baseUrl(WIRE_MOCK.baseUrl() + "/v1").apiKey("nams_contract-test-key")).build());
     }
 
     @AfterEach

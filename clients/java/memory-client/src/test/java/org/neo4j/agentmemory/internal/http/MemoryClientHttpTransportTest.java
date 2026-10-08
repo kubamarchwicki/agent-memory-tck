@@ -1,5 +1,14 @@
 package org.neo4j.agentmemory.internal.http;
 
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.EnumSource;
+import org.neo4j.agentmemory.testsupport.HttpClientUnderTest;
+import org.neo4j.agentmemory.conversation.NewMessage;
+import org.neo4j.agentmemory.conversation.MessageRole;
+import org.neo4j.agentmemory.exception.MemoryServiceException;
+import org.neo4j.agentmemory.exception.MemoryClientException;
+import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
 import org.neo4j.agentmemory.MemoryClient;
 import org.neo4j.agentmemory.MemoryClientConfiguration;
 import org.neo4j.agentmemory.conversation.CreateConversation;
@@ -23,9 +32,17 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
 @WireMockTest
+@ParameterizedClass
+@EnumSource(HttpClientUnderTest.class)
 class MemoryClientHttpTransportTest {
+    private final HttpClientUnderTest httpClient;
+
+    MemoryClientHttpTransportTest(HttpClientUnderTest httpClient) {
+        this.httpClient = httpClient;
+    }
+
     @Test
-    void createdJdkMemoryClientTriggersCorrectHttpCall(WireMockRuntimeInfo wireMock) {
+    void sendsAuthorizationAcceptAndJsonBody(WireMockRuntimeInfo wireMock) {
         stubFor(any(anyUrl()).willReturn(aResponse()
                 .withHeader("Content-Type", "application/json")
                 .withBody("""
@@ -34,8 +51,8 @@ class MemoryClientHttpTransportTest {
                           "userId": "alice"
                         }
                         """)));
-        var client = MemoryClient.create(MemoryClientConfiguration.builder()
-                .baseUrl(wireMock.getHttpBaseUrl() + "/v1").apiKey("test-api-key").build());
+        var client = MemoryClient.create(httpClient.configure(MemoryClientConfiguration.builder()
+                .baseUrl(wireMock.getHttpBaseUrl() + "/v1").apiKey("test-api-key")).build());
 
         client.createConversation(new CreateConversation("alice")).join();
 
@@ -86,8 +103,8 @@ class MemoryClientHttpTransportTest {
                                   "status": "success"
                                 }
                                 """)));
-        var client = MemoryClient.create(MemoryClientConfiguration.builder()
-                .baseUrl(wireMock.getHttpBaseUrl() + "/v1").apiKey("test-api-key").build());
+        var client = MemoryClient.create(httpClient.configure(MemoryClientConfiguration.builder()
+                .baseUrl(wireMock.getHttpBaseUrl() + "/v1").apiKey("test-api-key")).build());
 
         var conversation = client.createConversation(new CreateConversation()).join();
         var step = conversation
@@ -118,5 +135,80 @@ class MemoryClientHttpTransportTest {
         assertThat(conversation.id()).isEqualTo(conversationId);
         assertThat(step.id()).isEqualTo(stepId);
         assertThat(call.id()).isEqualTo(callId);
+    }
+    @Test
+    void roundTripsNonAsciiContent(WireMockRuntimeInfo wireMock) {
+        var id = UUID.randomUUID();
+        var content = "Zażółć gęślą jaźń 🧠";
+        stubFor(com.github.tomakehurst.wiremock.client.WireMock.post(
+                urlEqualTo("/v1/conversations/" + id + "/messages"))
+                .willReturn(aResponse().withHeader("Content-Type", "application/json")
+                        .withBody("{\"id\":\"15c63f73-f00f-45de-b62e-851ea483a552\","
+                                + "\"role\":\"user\",\"content\":\"" + content + "\"}")));
+
+        var message = client(wireMock).addMessage(id,
+                new NewMessage(
+                        MessageRole.USER, content)).join();
+
+        assertThat(message.content()).isEqualTo(content);
+        verify(postRequestedFor(urlEqualTo("/v1/conversations/" + id + "/messages"))
+                .withRequestBody(equalToJson("{\"role\":\"user\",\"content\":\"" + content + "\"}")));
+    }
+
+    @Test
+    void serviceFailureKeepsDiagnostics(WireMockRuntimeInfo wireMock) {
+        var id = UUID.randomUUID();
+        stubFor(com.github.tomakehurst.wiremock.client.WireMock.get(
+                urlEqualTo("/v1/conversations/" + id))
+                .willReturn(aResponse().withStatus(503).withHeader("X-Request-ID", "req-503")
+                        .withHeader("content-type", "application/problem+json").withBody("{\"detail\":\"busy\"}")));
+
+        var failure = org.assertj.core.api.Assertions.catchThrowable(
+                () -> client(wireMock).getConversation(id).join());
+        assertThat(failure.getCause()).isInstanceOf(MemoryServiceException.class);
+        var serviceFailure = (MemoryServiceException) failure.getCause();
+        assertThat(serviceFailure.statusCode()).isEqualTo(503);
+        assertThat(serviceFailure.responseBodyExcerpt()).contains("busy");
+        if (httpClient.keepsFailureHeaders()) {
+            assertThat(serviceFailure.contentType()).isEqualTo("application/problem+json");
+            assertThat(serviceFailure.responseHeaders().keySet())
+                    .anyMatch(key -> key.equalsIgnoreCase("x-request-id"));
+        } else {
+            assertThat(serviceFailure.contentType()).isEmpty();
+            assertThat(serviceFailure.responseHeaders()).isEmpty();
+        }
+    }
+
+    @Test
+    void droppedConnectionFailsTheFuture(WireMockRuntimeInfo wireMock) {
+        var id = UUID.randomUUID();
+        stubFor(com.github.tomakehurst.wiremock.client.WireMock.get(
+                urlEqualTo("/v1/conversations/" + id))
+                .willReturn(aResponse().withFault(com.github.tomakehurst.wiremock.http.Fault.EMPTY_RESPONSE)));
+
+        var failure = org.assertj.core.api.Assertions.catchThrowable(
+                () -> client(wireMock).getConversation(id).join());
+        assertThat(failure.getCause()).isInstanceOf(MemoryClientException.class)
+                .satisfies(clientFailure -> assertThat(clientFailure.getCause()).isNotNull());
+    }
+
+    @Test
+    void rejectedExecutorFailsTheFuture(WireMockRuntimeInfo wireMock) {
+        org.junit.jupiter.api.Assumptions.assumeTrue(httpClient.takesExecutor());
+        var executor = Executors.newSingleThreadExecutor();
+        executor.shutdown();
+        var client = MemoryClient.create(httpClient.configure(MemoryClientConfiguration.builder()
+                .baseUrl(wireMock.getHttpBaseUrl() + "/v1").apiKey("test-api-key"), executor).build());
+
+        var future = client.getConversation(UUID.randomUUID());
+        var failure = org.assertj.core.api.Assertions.catchThrowable(future::join);
+        assertThat(failure.getCause()).isInstanceOf(MemoryClientException.class)
+                .hasCauseInstanceOf(RejectedExecutionException.class);
+        verify(0, com.github.tomakehurst.wiremock.client.WireMock.anyRequestedFor(anyUrl()));
+    }
+
+    private MemoryClient client(WireMockRuntimeInfo wireMock) {
+        return MemoryClient.create(httpClient.configure(MemoryClientConfiguration.builder()
+                .baseUrl(wireMock.getHttpBaseUrl() + "/v1").apiKey("test-api-key")).build());
     }
 }

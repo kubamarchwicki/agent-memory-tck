@@ -34,8 +34,31 @@ a trailing slash is supported. Invalid environment settings or nonnull overrides
 `IllegalArgumentException` from `build()`. The built configuration is immutable and exposes `URI baseUrl()`
 and `String apiKey()`. Reusing a builder does not change earlier configurations.
 
-Both factories construct the default JDK HTTP adapter without checking remote
-reachability or authentication. Initialization logs the configured base URL at
+Use `jdkHttpClient(HttpClient)` to supply a configured JDK HTTP client:
+
+```java
+import java.net.http.HttpClient;
+import java.time.Duration;
+import java.util.concurrent.Executors;
+
+var executor = Executors.newCachedThreadPool();
+var httpClient = HttpClient.newBuilder()
+        .connectTimeout(Duration.ofSeconds(10))
+        .executor(executor)
+        .build();
+var client = MemoryClient.create(MemoryClientConfiguration.builder()
+        .apiKey("<workspace-api-key>")
+        .baseUrl("https://memory.neo4jlabs.com/v1")
+        .jdkHttpClient(httpClient)
+        .build());
+```
+
+The supplied client is used as configured, including its executor, proxy,
+timeouts, and TLS settings. The last HTTP client setter wins. The memory client
+never closes injected clients or executors; their lifecycle belongs to the application.
+
+The factories use the configured client, or a new `HttpClient.newHttpClient()`,
+without checking remote reachability or authentication. Initialization logs the configured base URL at
 INFO through `System.Logger`.
 
 Replace calls to the former key-only and endpoint/key factories with a built

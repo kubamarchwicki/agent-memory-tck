@@ -1,6 +1,9 @@
 package org.neo4j.agentmemory;
 
 import java.net.URI;
+import java.net.http.HttpClient;
+import org.neo4j.agentmemory.internal.http.HttpTransport;
+import org.neo4j.agentmemory.internal.http.JdkHttpTransport;
 import java.util.Objects;
 
 /**
@@ -13,10 +16,12 @@ public final class MemoryClientConfiguration {
     private static final String DEFAULT_BASE_URL = "https://memory.neo4jlabs.com/v1";
     private final URI baseUrl;
     private final String apiKey;
+    private final HttpTransport httpTransport;
 
-    private MemoryClientConfiguration(URI baseUrl, String apiKey) {
+    private MemoryClientConfiguration(URI baseUrl, String apiKey, HttpTransport httpTransport) {
         this.baseUrl = baseUrl;
         this.apiKey = apiKey;
+        this.httpTransport = httpTransport;
     }
 
     /** Returns the service base URL, including its version path. */
@@ -29,6 +34,10 @@ public final class MemoryClientConfiguration {
         return apiKey;
     }
 
+    HttpTransport httpTransport() {
+        return httpTransport;
+    }
+
     /** Returns a new builder with no explicit overrides. */
     public static Builder builder() {
         return new Builder();
@@ -38,6 +47,7 @@ public final class MemoryClientConfiguration {
     public static final class Builder {
         private String baseUrl;
         private String apiKey;
+        private HttpTransport httpTransport;
 
         private Builder() {}
 
@@ -66,6 +76,20 @@ public final class MemoryClientConfiguration {
          */
         public Builder apiKey(String apiKey) {
             this.apiKey = Objects.requireNonNull(apiKey, "apiKey");
+            return this;
+        }
+
+        /**
+         * Uses the supplied HTTP client as configured, including its executor,
+         * proxy, timeouts, and TLS settings. The client is never closed.
+         * Replaces any HTTP client set earlier.
+         *
+         * @param httpClient the application HTTP client
+         * @return this builder
+         * @throws NullPointerException if httpClient is null
+         */
+        public Builder jdkHttpClient(HttpClient httpClient) {
+            this.httpTransport = new JdkHttpTransport(Objects.requireNonNull(httpClient, "httpClient"));
             return this;
         }
 
@@ -102,7 +126,7 @@ public final class MemoryClientConfiguration {
                     || url.getRawUserInfo() != null || url.getRawQuery() != null || url.getRawFragment() != null) {
                 throw invalidBaseUrl();
             }
-            return new MemoryClientConfiguration(url, resolvedKey);
+            return new MemoryClientConfiguration(url, resolvedKey, httpTransport);
         }
 
         private static IllegalArgumentException invalidBaseUrl() {

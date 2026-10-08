@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.net.URI;
+import java.net.http.HttpClient;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -12,6 +13,25 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.neo4j.agentmemory.testsupport.EnvironmentProbe;
 
 class MemoryClientConfigurationTest {
+    @Test
+    void rejectsNullJdkHttpClient() {
+        assertThatThrownBy(() -> MemoryClientConfiguration.builder().jdkHttpClient(null))
+                .isInstanceOf(NullPointerException.class).hasMessage("httpClient");
+    }
+
+    @Test
+    void configurationWithoutHttpClientHasNoTransport() {
+        assertThat(MemoryClientConfiguration.builder().baseUrl("https://memory.test/v1")
+                .apiKey("key").build().httpTransport()).isNull();
+    }
+
+    @Test
+    void jdkHttpClientSelectsJdkTransport() {
+        assertThat(MemoryClientConfiguration.builder().baseUrl("https://memory.test/v1")
+                .apiKey("key").jdkHttpClient(HttpClient.newHttpClient())
+                .build().httpTransport().name()).isEqualTo("jdk-http");
+    }
+
     @Test
     void rejectsNullOverridesInSetters() {
         assertThatThrownBy(() -> MemoryClientConfiguration.builder().apiKey(null))

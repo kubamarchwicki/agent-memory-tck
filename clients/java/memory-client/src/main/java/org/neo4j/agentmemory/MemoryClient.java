@@ -22,6 +22,7 @@ import org.neo4j.agentmemory.reasoning.ToolCall;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
@@ -42,7 +43,7 @@ import java.util.concurrent.CompletableFuture;
  * validation can throw before a future is returned, as documented by each
  * method. Implementations must preserve the documented validation timing,
  * result ordering, snapshot semantics, and client-owned failure contract.
- * The default HTTP adapter uses {@link MemoryServiceException} for a
+ * The HTTP adapters use {@link MemoryServiceException} for a
  * non-success HTTP response, {@link ResponseDecodingException} for an
  * invalid success payload, and {@link MemoryClientException} for encoding
  * or transport failures.
@@ -54,9 +55,8 @@ import java.util.concurrent.CompletableFuture;
  * <p>Authentication requires a Workspace API key bound to the target workspace.
  * Admin keys with an explicitly supplied workspace ID are not yet supported.
  *
- * <p>The static {@code create} methods select the default JDK HTTP adapter.
- * Another adapter can implement this interface and bind the same live
- * handle classes to itself.
+ * <p>The static {@code create} methods use the configured HTTP client,
+ * or a new default JDK HTTP client when none is configured.
  */
 public interface MemoryClient {
     /**
@@ -98,7 +98,7 @@ public interface MemoryClient {
     }
 
     /**
-     * Constructs the default JDK HTTP client with environment settings.
+     * Constructs a client with environment settings and a new default JDK HTTP client.
      * Equivalent to create(MemoryClientConfiguration.builder().build()).
      * NAMS_API_KEY is required; NAMS_BASE_URL defaults to
      * https://memory.neo4jlabs.com/v1 when absent or blank.
@@ -114,7 +114,8 @@ public interface MemoryClient {
     }
 
     /**
-     * Constructs the default JDK HTTP client from validated configuration.
+     * Constructs a client from validated configuration using the configured HTTP
+     * client, or a new default JDK HTTP client when none is configured.
      * Logs the base URL without checking remote reachability or authentication.
      *
      * @param configuration immutable settings produced by the configuration builder
@@ -123,7 +124,8 @@ public interface MemoryClient {
      * @throws MissingJsonCodecException if Jackson 3 is unavailable
      */
     static MemoryClient create(MemoryClientConfiguration configuration) {
-        return HttpMemoryClient.create(configuration, null);
+        return HttpMemoryClient.create(Objects.requireNonNull(configuration, "configuration"),
+                configuration.httpTransport());
     }
 
     /**
