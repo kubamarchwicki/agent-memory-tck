@@ -4,7 +4,6 @@ import org.neo4j.agentmemory.conversation.ConversationContext;
 import org.neo4j.agentmemory.reasoning.ReasoningStepExplanation;
 import org.neo4j.agentmemory.reasoning.ReasoningTrace;
 
-import java.net.http.HttpHeaders;
 import java.net.URI;
 import java.util.List;
 import java.util.Locale;
@@ -30,8 +29,8 @@ final class ClientLogging {
 
     ClientLogging(System.Logger logger) { this.logger = logger; }
 
-    void initialized(URI baseUrl) {
-        emit(System.Logger.Level.INFO, () -> "event=client.initialized transport=jdk-http baseUrl=" + baseUrl);
+    void initialized(URI baseUrl, String transport) {
+        emit(System.Logger.Level.INFO, () -> "event=client.initialized transport=" + transport + " baseUrl=" + baseUrl);
     }
 
     <T> CompletableFuture<T> call(String operation, Function<Operation, CompletableFuture<T>> action) {
@@ -68,13 +67,13 @@ final class ClientLogging {
 
         void phase(Phase value) { phase = value; }
 
-        void response(int status, HttpHeaders headers) {
-            var raw = headers.firstValue("x-request-id")
-                    .or(() -> headers.firstValue("request-id"))
-                    .or(() -> headers.firstValue("x-amzn-requestid"));
+        void response(HttpResult result) {
+            var raw = result.firstHeader("x-request-id")
+                    .or(() -> result.firstHeader("request-id"))
+                    .or(() -> result.firstHeader("x-amzn-requestid"));
             var requestId = raw.filter(value -> value.matches("[A-Za-z0-9._:-]{1,128}"))
                     .orElse(null);
-            response = new ResponseInfo(status, requestId);
+            response = new ResponseInfo(result.status(), requestId);
             phase = Phase.HTTP;
         }
 

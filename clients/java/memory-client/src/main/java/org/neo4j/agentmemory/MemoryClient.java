@@ -12,7 +12,7 @@ import org.neo4j.agentmemory.exception.MemoryClientException;
 import org.neo4j.agentmemory.exception.MemoryServiceException;
 import org.neo4j.agentmemory.exception.MissingJsonCodecException;
 import org.neo4j.agentmemory.exception.ResponseDecodingException;
-import org.neo4j.agentmemory.internal.http.JdkMemoryClient;
+import org.neo4j.agentmemory.internal.http.HttpMemoryClient;
 import org.neo4j.agentmemory.reasoning.NewReasoningStep;
 import org.neo4j.agentmemory.reasoning.NewToolCall;
 import org.neo4j.agentmemory.reasoning.ReasoningStep;
@@ -123,7 +123,7 @@ public interface MemoryClient {
      * @throws MissingJsonCodecException if Jackson 3 is unavailable
      */
     static MemoryClient create(MemoryClientConfiguration configuration) {
-        return JdkMemoryClient.create(configuration);
+        return HttpMemoryClient.create(configuration, null);
     }
 
     /**

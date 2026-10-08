@@ -21,13 +21,10 @@ import org.neo4j.agentmemory.reasoning.ReasoningTrace;
 import org.neo4j.agentmemory.reasoning.ToolCall;
 import org.neo4j.agentmemory.reasoning.ToolCallStatus;
 
-import static java.net.http.HttpResponse.BodyHandlers.ofByteArray;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 import java.net.URI;
 import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
@@ -35,29 +32,32 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.function.Function;
 
-/** Default HTTP adapter. Internal implementation; use MemoryClient factories. */
-public final class JdkMemoryClient implements MemoryClient {
+/** HTTP memory operations. Internal implementation; use MemoryClient factories. */
+public final class HttpMemoryClient implements MemoryClient {
     private static final int BODY_EXCERPT_LIMIT = 1024;
 
     private final URI endpoint;
     private final String apiKey;
-    private final HttpClient httpClient;
+    private final HttpTransport transport;
     private final JsonCodec jsonCodec;
     private final ClientLogging logging;
 
-    JdkMemoryClient(URI endpoint, String apiKey, JsonCodec jsonCodec, ClientLogging logging) {
+    HttpMemoryClient(URI endpoint, String apiKey, HttpTransport transport, JsonCodec jsonCodec, ClientLogging logging) {
         this.endpoint = endpoint;
         this.apiKey = apiKey;
-        this.httpClient = HttpClient.newHttpClient();
+        this.transport = transport;
         this.jsonCodec = jsonCodec;
         this.logging = logging;
-        logging.initialized(endpoint);
+        logging.initialized(endpoint, transport.name());
     }
 
-    public static MemoryClient create(MemoryClientConfiguration configuration) {
+    public static MemoryClient create(MemoryClientConfiguration configuration, HttpTransport transport) {
         Objects.requireNonNull(configuration, "configuration");
-        return new JdkMemoryClient(configuration.baseUrl(), configuration.apiKey(),
-                JsonCodecs.jackson3(), new ClientLogging());
+        var jsonCodec = JsonCodecs.jackson3();
+        var selectedTransport = transport == null
+                ? new JdkHttpTransport(HttpClient.newHttpClient()) : transport;
+        return new HttpMemoryClient(configuration.baseUrl(), configuration.apiKey(),
+                selectedTransport, jsonCodec, new ClientLogging());
     }
 
     @Override
@@ -69,7 +69,7 @@ public final class JdkMemoryClient implements MemoryClient {
         }
         return post(
                 "createConversation",
-                "/conversations",
+                "/conversations", Map.of(),
                 body,
                 ConversationResponse.class,
                 this::conversation);
@@ -77,10 +77,9 @@ public final class JdkMemoryClient implements MemoryClient {
 
     @Override
     public CompletableFuture<List<Conversation>> listConversations(ListConversations request) {
-        var path = new StringBuilder("/conversations?limit=").append(request.limit());
         return get(
                 "listConversations",
-                path.toString(),
+                "/conversations?limit={limit}", Map.of("limit", request.limit()),
                 ConversationsResponse.class,
                 response -> Objects.requireNonNull(
                                 response.conversations(), "conversations array is required")
@@ -93,7 +92,7 @@ public final class JdkMemoryClient implements MemoryClient {
     public CompletableFuture<Conversation> getConversation(UUID conversationId) {
         return get(
                 "getConversation",
-                "/conversations/" + conversationId,
+                "/conversations/{conversationId}", Map.of("conversationId", conversationId),
                 ConversationResponse.class,
                 this::conversation);
     }
@@ -108,7 +107,7 @@ public final class JdkMemoryClient implements MemoryClient {
         }
         return post(
                 "searchEntities",
-                "/entities/search",
+                "/entities/search", Map.of(),
                 body,
                 EntitiesResponse.class,
                 response -> nullToEmpty(response.entities()).stream()
@@ -120,7 +119,7 @@ public final class JdkMemoryClient implements MemoryClient {
     public CompletableFuture<Message> addMessage(UUID conversationId, NewMessage message) {
         return post(
                 "addMessage",
-                "/conversations/" + conversationId + "/messages",
+                "/conversations/{conversationId}/messages", Map.of("conversationId", conversationId),
                 message,
                 Message.class,
                 response -> response);
@@ -132,7 +131,7 @@ public final class JdkMemoryClient implements MemoryClient {
         var snapshot = List.copyOf(messages);
         return post(
                 "addMessages",
-                "/conversations/" + conversationId + "/messages/bulk",
+                "/conversations/{conversationId}/messages/bulk", Map.of("conversationId", conversationId),
                 new AddMessagesRequest(snapshot),
                 MessagesResponse.class,
                 response -> List.copyOf(nullToEmpty(response.messages())));
@@ -140,7 +139,7 @@ public final class JdkMemoryClient implements MemoryClient {
 
     @Override
     public CompletableFuture<List<Message>> messages(UUID conversationId) {
-        return readMessages("/conversations/" + conversationId + "/messages");
+        return readMessages("/conversations/{conversationId}/messages", Map.of("conversationId", conversationId));
     }
 
     @Override
@@ -148,11 +147,12 @@ public final class JdkMemoryClient implements MemoryClient {
         if (limit < 1 || limit > 200) {
             throw new IllegalArgumentException("limit must be between 1 and 200");
         }
-        return readMessages("/conversations/" + conversationId + "/messages?limit=" + limit);
+        return readMessages("/conversations/{conversationId}/messages?limit={limit}",
+                Map.of("conversationId", conversationId, "limit", limit));
     }
 
-    private CompletableFuture<List<Message>> readMessages(String path) {
-        return get("messages", path, MessagesResponse.class,
+    private CompletableFuture<List<Message>> readMessages(String path, Map<String, Object> variables) {
+        return get("messages", path, variables, MessagesResponse.class,
                 response -> List.copyOf(Objects.requireNonNull(
                         response.messages(), "messages array is required")));
     }
@@ -161,7 +161,7 @@ public final class JdkMemoryClient implements MemoryClient {
     public CompletableFuture<ConversationContext> context(UUID conversationId) {
         return get(
                 "context",
-                "/conversations/" + conversationId + "/context",
+                "/conversations/{conversationId}/context", Map.of("conversationId", conversationId),
                 ConversationContext.class,
                 response -> response);
     }
@@ -176,7 +176,7 @@ public final class JdkMemoryClient implements MemoryClient {
         step.getResult().ifPresent(result -> body.put("result", result));
         return post(
                 "recordStep",
-                "/reasoning/steps",
+                "/reasoning/steps", Map.of(),
                 body,
                 RecordReasoningStepResponse.class,
                 this::recordedReasoningStep);
@@ -193,7 +193,7 @@ public final class JdkMemoryClient implements MemoryClient {
         call.getDuration().ifPresent(duration -> body.put("durationMs", duration.toMillis()));
         return post(
                 "recordToolCall",
-                "/reasoning/tool-calls",
+                "/reasoning/tool-calls", Map.of(),
                 body,
                 RecordToolCallResponse.class,
                 response -> new ToolCall(
@@ -211,7 +211,7 @@ public final class JdkMemoryClient implements MemoryClient {
     public CompletableFuture<ReasoningTrace> trace(UUID conversationId) {
         return get(
                 "trace",
-                "/reasoning/trace/" + conversationId,
+                "/reasoning/trace/{conversationId}", Map.of("conversationId", conversationId),
                 ReasoningTraceResponse.class,
                 response -> reasoningTrace(conversationId, response));
     }
@@ -220,7 +220,7 @@ public final class JdkMemoryClient implements MemoryClient {
     public CompletableFuture<ReasoningStepExplanation> explainReasoningStep(UUID stepId) {
         return get(
                 "explainReasoningStep",
-                "/reasoning/explain/" + stepId,
+                "/reasoning/explain/{stepId}", Map.of("stepId", stepId),
                 ReasoningStepExplanationResponse.class,
                 this::reasoningStepExplanation);
     }
@@ -229,7 +229,8 @@ public final class JdkMemoryClient implements MemoryClient {
     public CompletableFuture<Void> deleteConversation(UUID conversationId) {
         var operation = "deleteConversation";
         return logging.call(operation, log -> {
-            var request = request("/conversations/" + conversationId).DELETE().build();
+            var request = request("DELETE", "/conversations/{conversationId}",
+                    Map.of("conversationId", conversationId), null);
             return exchange(operation, request, log).thenApply(response -> {
                 requireSuccess(operation, response);
                 return null;
@@ -238,15 +239,15 @@ public final class JdkMemoryClient implements MemoryClient {
     }
 
     private <W, T> CompletableFuture<T> get(
-            String operation, String path, Class<W> wireType, Function<W, T> transform) {
+            String operation, String path, Map<String, Object> variables, Class<W> wireType, Function<W, T> transform) {
         return logging.call(operation, log -> {
-            var request = request(path).GET().build();
+            var request = request("GET", path, variables, null);
             return exchangeAndDecode(operation, request, wireType, transform, log);
         });
     }
 
     private <W, T> CompletableFuture<T> post(
-            String operation, String path, Object wireRequest,
+            String operation, String path, Map<String, Object> variables, Object wireRequest,
             Class<W> wireType, Function<W, T> transform) {
         return logging.call(operation, log -> {
             log.phase(ClientLogging.Phase.ENCODE);
@@ -258,21 +259,23 @@ public final class JdkMemoryClient implements MemoryClient {
                         operation + " could not encode request JSON", failure));
             }
             log.phase(ClientLogging.Phase.REQUEST);
-            var request = request(path).header("Content-Type", "application/json")
-                    .POST(HttpRequest.BodyPublishers.ofByteArray(body)).build();
+            var request = request("POST", path, variables, body);
             return exchangeAndDecode(operation, request, wireType, transform, log);
         });
     }
 
-    private HttpRequest.Builder request(String path) {
-        return HttpRequest.newBuilder(URI.create(endpoint.toString().replaceAll("/+$", "") + path))
-                .header("Authorization", "Bearer " + apiKey)
-                .header("Accept", "application/json");
+    private HttpCall request(String method, String path, Map<String, Object> variables, byte[] body) {
+        var headers = new LinkedHashMap<String, String>();
+        headers.put("Authorization", "Bearer " + apiKey);
+        headers.put("Accept", "application/json");
+        if ("POST".equals(method)) headers.put("Content-Type", "application/json");
+        return new HttpCall(method, endpoint.toString().replaceAll("/+$", "") + path,
+                variables, headers, body);
     }
 
     private <W, T> CompletableFuture<T> exchangeAndDecode(
             String operation,
-            HttpRequest request,
+            HttpCall request,
             Class<W> wireType,
             Function<W, T> transform, ClientLogging.Operation log) {
         return exchange(operation, request, log).thenApply(response -> {
@@ -283,7 +286,7 @@ public final class JdkMemoryClient implements MemoryClient {
             } catch (RuntimeException failure) {
                 throw new ResponseDecodingException(
                         operation,
-                        response.statusCode(),
+                        response.status(),
                         contentType(response),
                         excerpt(response.body()),
                         failure);
@@ -291,16 +294,16 @@ public final class JdkMemoryClient implements MemoryClient {
         });
     }
 
-    private CompletableFuture<HttpResponse<byte[]>> exchange(
-            String operation, HttpRequest request, ClientLogging.Operation log) {
+    private CompletableFuture<HttpResult> exchange(
+            String operation, HttpCall request, ClientLogging.Operation log) {
         log.phase(ClientLogging.Phase.TRANSPORT);
         try {
-            return httpClient.sendAsync(request, ofByteArray()).handle((response, failure) -> {
+            return transport.send(request).handle((response, failure) -> {
                 if (failure != null) {
                     throw new MemoryClientException(
                             operation + " HTTP request failed", unwrap(failure));
                 }
-                log.response(response.statusCode(), response.headers());
+                log.response(response);
                 return response;
             });
         } catch (RuntimeException failure) {
@@ -310,12 +313,12 @@ public final class JdkMemoryClient implements MemoryClient {
     }
 
     private static void requireSuccess(
-            String operation, HttpResponse<byte[]> response) {
-        if (response.statusCode() < 200 || response.statusCode() >= 300) {
+            String operation, HttpResult response) {
+        if (response.status() < 200 || response.status() >= 300) {
             throw new MemoryServiceException(
                     operation,
-                    response.statusCode(),
-                    response.headers().map(),
+                    response.status(),
+                    response.headers(),
                     contentType(response),
                     excerpt(response.body()));
         }
@@ -409,8 +412,8 @@ public final class JdkMemoryClient implements MemoryClient {
         return current;
     }
 
-    private static String contentType(HttpResponse<?> response) {
-        return response.headers().firstValue("Content-Type").orElse("");
+    private static String contentType(HttpResult response) {
+        return response.firstHeader("Content-Type").orElse("");
     }
 
     private static String excerpt(byte[] body) {

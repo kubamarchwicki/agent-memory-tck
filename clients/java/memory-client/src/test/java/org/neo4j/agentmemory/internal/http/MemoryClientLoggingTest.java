@@ -33,6 +33,10 @@ import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
 import java.io.File;
 import java.net.URI;
+import java.net.http.HttpClient;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.function.Supplier;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -55,8 +59,8 @@ class MemoryClientLoggingTest {
                         .withHeader("x-request-id", "req-decode")
                         .withBody("{invalid-json-secret")));
         var sink = new RecordingClientLogger(System.Logger.Level.DEBUG);
-        var client = new JdkMemoryClient(URI.create(wireMock.getHttpBaseUrl() + "/v1"),
-                "api-key-secret", new Jackson3JsonCodec(), new ClientLogging(sink));
+        var client = new HttpMemoryClient(URI.create(wireMock.getHttpBaseUrl() + "/v1"),
+                "api-key-secret", new JdkHttpTransport(HttpClient.newHttpClient()), new Jackson3JsonCodec(), new ClientLogging(sink));
         assertThatThrownBy(() -> client.listConversations(new ListConversations(20)).join())
                 .hasCauseInstanceOf(ResponseDecodingException.class);
         var events = sink.awaitEvents(3);
@@ -180,8 +184,8 @@ class MemoryClientLoggingTest {
             public <T> T decode(byte[] json, Class<T> type) { return new Jackson3JsonCodec().decode(json, type); }
         };
         var sink = debug();
-        var client = new JdkMemoryClient(URI.create(server.getHttpBaseUrl() + "/v1"),
-                "api-key-secret", codec, new ClientLogging(sink));
+        var client = new HttpMemoryClient(URI.create(server.getHttpBaseUrl() + "/v1"),
+                "api-key-secret", new JdkHttpTransport(HttpClient.newHttpClient()), codec, new ClientLogging(sink));
         var future = client.createConversation(new CreateConversation());
         assertThat(catchThrowable(future::join).getCause()).isInstanceOf(MemoryClientException.class).hasCause(original);
         terminal(sink, "createConversation", "phase=encode", "outcome=failure");
@@ -201,11 +205,16 @@ class MemoryClientLoggingTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"get", "post", "delete"})
-    void requestConstructionFailureRemainsSynchronous(String method) throws Exception {
+    void transportFailureCompletesTheFutureExceptionally(String method) throws Exception {
         var sink = debug();
-        var client = new JdkMemoryClient(URI.create("ftp://endpoint-secret/v1"),
-                "api-key-secret", new Jackson3JsonCodec(), new ClientLogging(sink));
-        record RequestCase(String operation, Runnable invoke) {}
+        var original = new IllegalStateException("send-secret");
+        HttpTransport transport = new HttpTransport() {
+            public String name() { return "jdk-http"; }
+            public CompletableFuture<HttpResult> send(HttpCall call) { throw original; }
+        };
+        var client = new HttpMemoryClient(URI.create("https://endpoint-secret/v1"),
+                "api-key-secret", transport, new Jackson3JsonCodec(), new ClientLogging(sink));
+        record RequestCase(String operation, Supplier<CompletableFuture<?>> invoke) {}
         var requestCase = switch (method) {
             case "post" -> new RequestCase("createConversation",
                     () -> client.createConversation(new CreateConversation()));
@@ -213,8 +222,12 @@ class MemoryClientLoggingTest {
             default -> new RequestCase("listConversations",
                     () -> client.listConversations(new ListConversations(20)));
         };
-        assertThatThrownBy(requestCase.invoke()::run).isInstanceOf(IllegalArgumentException.class);
-        terminal(sink, requestCase.operation(), "phase=request", "outcome=failure");
+        var future = requestCase.invoke().get();
+        assertThatThrownBy(future::join).isInstanceOf(CompletionException.class)
+                .hasCauseInstanceOf(MemoryClientException.class);
+        assertThat(catchThrowable(future::join).getCause()).hasCause(original);
+        terminal(sink, requestCase.operation(), "phase=transport", "outcome=failure",
+                "errorType=MemoryClientException");
     }
 
     @Test
@@ -324,9 +337,9 @@ class MemoryClientLoggingTest {
 
     private static RecordingClientLogger debug() { return new RecordingClientLogger(System.Logger.Level.DEBUG); }
 
-    private static JdkMemoryClient client(WireMockRuntimeInfo server, RecordingClientLogger sink) {
-        return new JdkMemoryClient(URI.create(server.getHttpBaseUrl() + "/v1"), "api-key-secret",
-                new Jackson3JsonCodec(), new ClientLogging(sink));
+    private static HttpMemoryClient client(WireMockRuntimeInfo server, RecordingClientLogger sink) {
+        return new HttpMemoryClient(URI.create(server.getHttpBaseUrl() + "/v1"), "api-key-secret",
+                new JdkHttpTransport(HttpClient.newHttpClient()), new Jackson3JsonCodec(), new ClientLogging(sink));
     }
 
     private static String terminal(RecordingClientLogger sink, String operation, String... fields) throws Exception {
@@ -341,7 +354,7 @@ class MemoryClientLoggingTest {
         assertThat(events.get(1).message()).contains("event=operation.started");
         assertThat(events.get(2).message()).contains("event=operation.completed").contains(fields);
         assertThat(events.toString()).doesNotContain("api-key-secret", "payload-secret", "response-secret",
-                "body-secret", "header-secret", "encode-secret", ID.toString());
+                "body-secret", "header-secret", "encode-secret", "send-secret", ID.toString());
         assertThat(events.subList(1, 3).toString()).doesNotContain("endpoint-secret");
         return events.get(2).message();
     }

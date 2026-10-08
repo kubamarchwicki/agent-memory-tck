@@ -8,7 +8,6 @@ import org.neo4j.agentmemory.reasoning.ReasoningTrace;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import java.net.http.HttpHeaders;
 import java.net.URI;
 import java.util.List;
 import java.util.Map;
@@ -33,7 +32,7 @@ class ClientLoggingTest {
             invocations.incrementAndGet();
             assertThat(sink.entries()).singleElement().satisfies(event ->
                     assertThat(event.message()).startsWith("event=operation.started operation=messages "));
-            operation.response(200, headers(Map.of("x-request-id", List.of("req-123"))));
+            operation.response(new HttpResult(200, Map.of("x-request-id", List.of("req-123")), new byte[0]));
             return future;
         });
         assertThat(invocations.get()).isEqualTo(1);
@@ -52,7 +51,7 @@ class ClientLoggingTest {
     void infoSuppressesOperationSummaries() {
         var sink = new RecordingClientLogger(System.Logger.Level.INFO);
         var logging = new ClientLogging(sink);
-        logging.initialized(URI.create("https://memory.test/v1"));
+        logging.initialized(URI.create("https://memory.test/v1"), "jdk-http");
         logging.call("messages", operation -> CompletableFuture.completedFuture(List.of()));
         assertThat(sink.entries()).containsExactly(new RecordingClientLogger.Entry(
                 System.Logger.Level.INFO, "event=client.initialized transport=jdk-http baseUrl=https://memory.test/v1"));
@@ -77,7 +76,7 @@ class ClientLoggingTest {
                 "messages", 503, Map.of(), "application/json", "body-secret");
         var future = new CompletableFuture<Object>();
         assertThat(new ClientLogging(sink).call("messages", operation -> {
-            operation.response(503, headers(Map.of()));
+            operation.response(new HttpResult(503, Map.of(), new byte[0]));
             return future;
         })).isSameAs(future);
         future.completeExceptionally(failure);
@@ -109,7 +108,7 @@ class ClientLoggingTest {
         for (var value : List.of("req-123", "bad value", "x".repeat(129), "", "x".repeat(128))) {
             var sink = new RecordingClientLogger(System.Logger.Level.DEBUG);
             new ClientLogging(sink).call("messages", operation -> {
-                operation.response(200, headers(Map.of(header, List.of(value))));
+                operation.response(new HttpResult(200, Map.of(header, List.of(value)), new byte[0]));
                 return CompletableFuture.completedFuture(List.of());
             });
             var events = sink.awaitEvents(2);
@@ -135,9 +134,9 @@ class ClientLoggingTest {
         var expected = List.of("", "first", "second", "");
         for (int index = 0; index < cases.size(); index++) {
             var sink = new RecordingClientLogger(System.Logger.Level.DEBUG);
-            var responseHeaders = headers(cases.get(index));
+            var responseHeaders = cases.get(index);
             new ClientLogging(sink).call("messages", operation -> {
-                operation.response(200, responseHeaders);
+                operation.response(new HttpResult(200, responseHeaders, new byte[0]));
                 return CompletableFuture.completedFuture(List.of());
             });
             var events = sink.awaitEvents(2);
@@ -211,7 +210,7 @@ class ClientLoggingTest {
             }
         };
         var logging = new ClientLogging(logger);
-        logging.initialized(URI.create("https://memory.test/v1"));
+        logging.initialized(URI.create("https://memory.test/v1"), "jdk-http");
         var success = new CompletableFuture<String>();
         assertThat(logging.call("messages", operation -> success)).isSameAs(success);
         success.complete("result");
@@ -260,14 +259,20 @@ class ClientLoggingTest {
         assertSafe(events);
     }
 
+    @Test
+    void requestIdLookupIgnoresHeaderNameCase() throws Exception {
+        var sink = new RecordingClientLogger(System.Logger.Level.DEBUG);
+        new ClientLogging(sink).call("messages", operation -> {
+            operation.response(new HttpResult(200, Map.of("X-Request-ID", List.of("req-123")), new byte[0]));
+            return CompletableFuture.completedFuture(List.of());
+        });
+        assertThat(sink.awaitEvents(2).get(1).message()).contains("requestId=req-123");
+    }
+
     private static String field(String message, String name) {
         return java.util.Arrays.stream(message.split(" "))
                 .filter(part -> part.startsWith(name + "="))
                 .findFirst().orElseThrow().substring(name.length() + 1);
-    }
-
-    private static HttpHeaders headers(Map<String, List<String>> values) {
-        return HttpHeaders.of(values, (name, value) -> true);
     }
 
     private static void assertSafe(List<RecordingClientLogger.Entry> events) {
