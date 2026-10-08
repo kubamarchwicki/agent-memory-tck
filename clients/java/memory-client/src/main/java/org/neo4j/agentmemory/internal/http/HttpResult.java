@@ -7,8 +7,8 @@ import java.util.Optional;
 import java.util.TreeMap;
 
 /** An uninterpreted HTTP response with case-insensitive headers. */
-public record HttpResult(int status, Map<String, List<String>> headers, byte[] body) {
-    public HttpResult {
+record HttpResult(int status, Map<String, List<String>> headers, byte[] body) {
+    HttpResult {
         var copiedHeaders = new TreeMap<String, List<String>>(String.CASE_INSENSITIVE_ORDER);
         headers.forEach((name, values) -> copiedHeaders.put(name, List.copyOf(values)));
         headers = Collections.unmodifiableMap(copiedHeaders);

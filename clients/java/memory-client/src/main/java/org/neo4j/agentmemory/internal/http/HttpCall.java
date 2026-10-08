@@ -6,11 +6,11 @@ import java.util.UUID;
 import java.util.regex.Pattern;
 
 /** An HTTP request with an absolute URI template. */
-public record HttpCall(String method, String uriTemplate, Map<String, Object> uriVariables,
+record HttpCall(String method, String uriTemplate, Map<String, Object> uriVariables,
         Map<String, String> headers, byte[] body) {
     private static final Pattern VARIABLE = Pattern.compile("\\{([^{}]+)\\}");
 
-    public HttpCall {
+    HttpCall {
         if (!"GET".equals(method) && !"POST".equals(method) && !"DELETE".equals(method)) {
             throw new IllegalArgumentException("unsupported HTTP method: " + method);
         }
