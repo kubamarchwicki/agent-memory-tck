@@ -428,7 +428,6 @@ public final class HttpMemoryClient implements MemoryClient {
 
     private record AddMessagesRequest(List<NewMessage> messages) {}
 
-    // TODO: Verify rich typed bindings for parity before adding another Jackson adapter.
     private record EntitiesResponse(
             List<Entity> entities,
             String searchType) {}

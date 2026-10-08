@@ -1,7 +1,9 @@
 package org.neo4j.agentmemory;
 
 import org.junit.jupiter.params.ParameterizedClass;
-import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.neo4j.agentmemory.internal.http.JsonCodecUnderTest;
 import org.neo4j.agentmemory.testsupport.HttpClientUnderTest;
 import org.neo4j.agentmemory.conversation.Conversation;
 import org.neo4j.agentmemory.conversation.CreateConversation;
@@ -22,23 +24,34 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
+import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
 import java.time.Duration;
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 @ParameterizedClass
-@EnumSource(HttpClientUnderTest.class)
+@MethodSource("clients")
 class MemoryClientContractTest {
     private final HttpClientUnderTest httpClient;
+    private final JsonCodecUnderTest codec;
 
-    MemoryClientContractTest(HttpClientUnderTest httpClient) {
+    MemoryClientContractTest(HttpClientUnderTest httpClient, JsonCodecUnderTest codec) {
         this.httpClient = httpClient;
+        this.codec = codec;
+    }
+
+    static Stream<Arguments> clients() {
+        return Stream.concat(
+                Arrays.stream(HttpClientUnderTest.values()).map(http -> arguments(http, JsonCodecUnderTest.JACKSON_3)),
+                Stream.of(arguments(HttpClientUnderTest.JDK_DEFAULT, JsonCodecUnderTest.JACKSON_2)));
     }
 
     @RegisterExtension
@@ -51,8 +64,11 @@ class MemoryClientContractTest {
 
     @BeforeEach
     void startFromACleanContract() {
-        client = MemoryClient.create(httpClient.configure(MemoryClientConfiguration.builder()
-                .baseUrl(WIRE_MOCK.baseUrl() + "/v1").apiKey("nams_contract-test-key")).build());
+        var configuration = httpClient.configure(MemoryClientConfiguration.builder()
+                .baseUrl(WIRE_MOCK.baseUrl() + "/v1").apiKey("nams_contract-test-key")).build();
+        client = codec == JsonCodecUnderTest.JACKSON_3
+                ? MemoryClient.create(configuration)
+                : codec.client(configuration);
     }
 
     @AfterEach
