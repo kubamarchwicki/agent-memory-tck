@@ -244,7 +244,8 @@ class MemoryClientLoggingTest {
     void factoryLogsOnlySuccessfulConstruction() throws Exception {
         var classpath = System.getProperty("surefire.test.class.path", System.getProperty("java.class.path"));
         var success = probe(classpath, "success");
-        assertThat(success).contains("constructed", " INFO ", "org.neo4j.agentmemory.JdkMemoryClient");
+        assertThat(success).contains("constructed", " INFO ",
+                "org.neo4j.agentmemory.MemoryClient - event=client.initialized transport=jdk-http");
         assertThat(success.lines().filter(line -> line.contains("event=client.initialized"))).hasSize(1);
         assertThat(success).contains("baseUrl=https://memory.test/v1").doesNotContain("operation.started", "probe-key");
         assertThat(probe(classpath, "blank-key")).contains("IllegalArgumentException").doesNotContain("client.initialized");

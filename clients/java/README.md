@@ -142,7 +142,7 @@ public final class ReadConversationMessages {
 }
 ```
 
-The client uses JDK `System.Logger`: `org.neo4j.agentmemory.JdkMemoryClient` for initialization and operations, `org.neo4j.agentmemory.MemoryClientConfiguration` for the default base URL warning, and `org.neo4j.agentmemory.AwaitSupport` for await configuration. To capture these events with Logback, add the JDK Platform Logging bridge and Logback backend to the **application's** dependencies. The bridge routes `System.Logger` through SLF4J. [SLF4J documents the bridge here](https://www.slf4j.org/manual.html#jep264).
+The client uses JDK `System.Logger`: `org.neo4j.agentmemory.MemoryClient` for initialization and operations. Earlier snapshots used `org.neo4j.agentmemory.JdkMemoryClient`. `org.neo4j.agentmemory.MemoryClientConfiguration` logs the default base URL warning, and `org.neo4j.agentmemory.AwaitSupport` logs await configuration. To capture these events with Logback, add the JDK Platform Logging bridge and Logback backend to the **application's** dependencies. The bridge routes `System.Logger` through SLF4J. [SLF4J documents the bridge here](https://www.slf4j.org/manual.html#jep264).
 
 ```xml
 <dependency>
@@ -186,7 +186,7 @@ The package entry admits initialization and fallback INFO events even with a WAR
 | WARNING | Default base URL selection on each configuration build; once-only invalid default-await setting fallback |
 | ERROR | None currently; applications own reporting of returned exceptions |
 
-`event=client.initialized transport=jdk-http baseUrl=https://memory.neo4jlabs.com/v1` means local construction succeeded and identifies the configured service URL. It does not establish service reachability or authentication. Operation timing starts at shared request-helper entry, includes POST encoding, and ends after HTTP status validation, decoding, and domain conversion (status validation alone for DELETE). Success does not establish extraction or enrichment readiness. Synchronous validation before helper entry emits no operation event.
+`event=client.initialized transport=jdk-http baseUrl=https://memory.neo4jlabs.com/v1` means local construction succeeded and identifies the configured service URL. The `transport` is `jdk-http`, `spring-rest-client`, or `langchain4j-http`, depending on the configured HTTP client. It does not establish service reachability or authentication. Operation timing starts at shared request-helper entry, includes POST encoding, and ends after HTTP status validation, decoding, and domain conversion (status validation alone for DELETE). Success does not establish extraction or enrichment readiness. Synchronous validation before helper entry emits no operation event.
 
 For example, at DEBUG the client can emit these diagnostic summaries (values are illustrative):
 
@@ -206,7 +206,7 @@ Cancellation describes the returned future's outcome, without confirming transpo
 You can verify package inheritance independently of a client operation:
 
 ```java
-var clientLogger = System.getLogger("org.neo4j.agentmemory.JdkMemoryClient");
+var clientLogger = System.getLogger("org.neo4j.agentmemory.MemoryClient");
 clientLogger.log(System.Logger.Level.INFO, "probe-initialized");
 clientLogger.log(System.Logger.Level.DEBUG, "probe-completed");
 System.getLogger("org.neo4j.agentmemory.AwaitSupport")

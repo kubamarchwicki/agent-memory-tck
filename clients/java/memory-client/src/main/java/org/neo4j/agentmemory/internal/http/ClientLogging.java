@@ -24,7 +24,7 @@ final class ClientLogging {
     private final System.Logger logger;
 
     ClientLogging() {
-        this(System.getLogger("org.neo4j.agentmemory.JdkMemoryClient"));
+        this(System.getLogger("org.neo4j.agentmemory.MemoryClient"));
     }
 
     ClientLogging(System.Logger logger) { this.logger = logger; }
