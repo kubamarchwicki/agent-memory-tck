@@ -13,7 +13,7 @@ final class JsonCodecs {
     private JsonCodecs() {}
 
     static JsonCodec select() {
-        // Default candidates must stay lambdas to defer adapter resolution until after the probe.
+        // Use lambdas: constructor references link adapters before the guarded classpath probe.
         return select(List.of(
                 new Candidate("tools.jackson.core:jackson-databind 3.1.4+",
                         "tools.jackson.databind.json.JsonMapper", () -> new Jackson3JsonCodec()),

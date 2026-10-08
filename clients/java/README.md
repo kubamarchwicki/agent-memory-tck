@@ -1,6 +1,6 @@
 # Neo4j Agent Memory Java client
 
-This Java 17 client accesses the hosted Neo4j Agent Memory Service. The core artifact is `org.neo4j:agent-memory-client:0.1.0-SNAPSHOT`. It uses the JDK HTTP client by default and can reuse an application's Spring `RestClient` or LangChain4j `HttpClient`. The framework dependencies are optional. Applications must provide Jackson 3 at runtime for the optional JSON adapter.
+This Java 17 client accesses the hosted Neo4j Agent Memory Service. The core artifact is `org.neo4j:agent-memory-client:0.1.0-SNAPSHOT`. It uses the JDK HTTP client by default and can reuse an application's Spring `RestClient` or LangChain4j `HttpClient`. The framework dependencies are optional. The client uses whichever Jackson major the application provides at runtime, preferring Jackson 3 when both are usable.
 
 ## Public API
 
@@ -267,7 +267,7 @@ The package entry admits initialization and fallback INFO events even with a WAR
 | WARNING | Default base URL selection on each configuration build; once-only invalid default-await setting fallback |
 | ERROR | None currently; applications own reporting of returned exceptions |
 
-`event=client.initialized transport=jdk-http baseUrl=https://memory.neo4jlabs.com/v1` means local construction succeeded and identifies the configured service URL. The `transport` is `jdk-http`, `spring-rest-client`, or `langchain4j-http`, depending on the configured HTTP client. It does not establish service reachability or authentication. Operation timing starts at shared request-helper entry, includes POST encoding, and ends after HTTP status validation, decoding, and domain conversion (status validation alone for DELETE). Success does not establish extraction or enrichment readiness. Synchronous validation before helper entry emits no operation event.
+`event=client.initialized transport=jdk-http json=jackson3 baseUrl=https://memory.neo4jlabs.com/v1` means local construction succeeded and identifies the configured service URL. The `transport` is `jdk-http`, `spring-rest-client`, or `langchain4j-http`, depending on the configured HTTP client. The `json` field is `jackson3` or `jackson2`, depending on the usable codecs on the classpath. It does not establish service reachability or authentication. Operation timing starts at shared request-helper entry, includes POST encoding, and ends after HTTP status validation, decoding, and domain conversion (status validation alone for DELETE). Success does not establish extraction or enrichment readiness. Synchronous validation before helper entry emits no operation event.
 
 For example, at DEBUG the client can emit these diagnostic summaries (values are illustrative):
 
@@ -311,6 +311,16 @@ With the package at INFO and root at WARN, only the INFO and WARNING probes appe
 </dependency>
 ```
 
+`com.fasterxml.jackson.core:jackson-databind` 2.19.0+ works instead of Jackson 3.
+
+Verified supported hosts:
+
+- Spring AI 2.0+ (Jackson 3.1.4+, Spring Framework 7.0+).
+- LangChain4j 1.0+ (its `langchain4j-core` brings Jackson 2.19+).
+- Standalone applications that declare either major.
+
+`micronaut-serde` applications have no `jackson-databind` and must add one.
+
 The default JDK client needs neither Spring nor LangChain4j. Add the corresponding optional application dependency only when injecting that framework's client:
 
 ```xml
@@ -328,7 +338,15 @@ The default JDK client needs neither Spring nor LangChain4j. Add the correspondi
 </dependency>
 ```
 
-The contract suite verifies Spring Framework 7.0.0 through 7.0.9 (Micrometer 1.16.0 through 1.16.7) and LangChain4j 1.0.0 through 1.22.0 at both endpoints. Reflecting over `MemoryClientConfiguration.Builder` methods requires both frameworks on the classpath; otherwise it throws `NoClassDefFoundError`.
+The build tests the floors: Jackson 3.1.4 and 2.19.0, Spring Framework 7.0.0 with Micrometer 1.16.0, and LangChain4j 1.0.0. The suite also passes at the newest supported releases below, verifying the endpoints of Jackson 3.1.4 through 3.1.5, Jackson 2.19.0 through 2.22.1, Spring Framework 7.0.0 through 7.0.9 with Micrometer 1.16.0 through 1.16.7, and LangChain4j 1.0.0 through 1.22.0:
+
+```bash
+mvn -f clients/java/pom.xml -pl memory-client -am test \
+  -Djackson3.version=3.1.5 -Djackson2.version=2.22.1 \
+  -Dspring.version=7.0.9 -Dmicrometer.version=1.16.7 -Dlangchain4j.version=1.22.0
+```
+
+Reflecting over `MemoryClientConfiguration.Builder` methods requires both frameworks on the classpath; otherwise it throws `NoClassDefFoundError`.
 
 These coordinates alone do not imply a published artifact. The supported handoff is a reachable, exact Git commit and a source build before downstream CI resolves the snapshot. From a clean checkout of the supplied commit, with Java 17+ and Maven available:
 

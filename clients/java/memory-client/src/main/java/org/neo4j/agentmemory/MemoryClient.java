@@ -108,7 +108,7 @@ public interface MemoryClient {
      *
      * @return a client using the resolved environment settings
      * @throws IllegalArgumentException if environment settings are invalid
-     * @throws MissingJsonCodecException if Jackson 3 is unavailable
+     * @throws MissingJsonCodecException if neither Jackson 3 nor Jackson 2 is usable
      * @see MemoryClientConfiguration.Builder#build()
      */
     static MemoryClient create() {
@@ -123,7 +123,7 @@ public interface MemoryClient {
      * @param configuration immutable settings produced by the configuration builder
      * @return a client using the supplied settings
      * @throws NullPointerException if configuration is null
-     * @throws MissingJsonCodecException if Jackson 3 is unavailable
+     * @throws MissingJsonCodecException if neither Jackson 3 nor Jackson 2 is usable
      */
     static MemoryClient create(MemoryClientConfiguration configuration) {
         return HttpMemoryClient.create(Objects.requireNonNull(configuration, "configuration"),
