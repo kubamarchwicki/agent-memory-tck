@@ -148,9 +148,10 @@ MemoryClient memoryClient(RestClient.Builder restClientBuilder, AsyncTaskExecuto
 The client's interceptors, observation registry, request-factory timeouts, and TLS
 settings apply. Observations are tagged with route templates such as
 `/v1/conversations/{conversationId}`. The memory configuration supplies the
-absolute service URLs and explicit memory headers. The RestClient's base URL
-and status handlers do not apply. Explicit memory headers override corresponding
-defaults; unrelated default headers remain. Non-success responses retain
+absolute service URLs and the memory headers. The RestClient's base URL,
+default headers, and status handlers do not apply, so a default credential or
+tenant header meant for another service is never sent to the memory service.
+Headers added by interceptors still are. Non-success responses retain
 their headers and are mapped to the memory client's exceptions.
 
 Blocking exchanges run on the supplied executor. The memory client closes

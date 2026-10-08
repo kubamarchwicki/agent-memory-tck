@@ -48,16 +48,16 @@
             <optional>true</optional>
         </dependency>
         <dependency>
-            <groupId>io.micrometer</groupId>
-            <artifactId>micrometer-observation-test</artifactId>
-            <version>${micrometer.version}</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
             <groupId>tools.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
             <version>${jackson.version}</version>
             <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-observation-test</artifactId>
+            <version>${micrometer.version}</version>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>com.atlassian.oai</groupId>
@@ -102,17 +102,6 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
-
-    <profiles>
-        <profile>
-            <id>frameworks-latest</id>
-            <properties>
-                <spring.version>7.0.9</spring.version>
-                <micrometer.version>1.16.7</micrometer.version>
-                <langchain4j.version>1.22.0</langchain4j.version>
-            </properties>
-        </profile>
-    </profiles>
 
     <build>
         <plugins>

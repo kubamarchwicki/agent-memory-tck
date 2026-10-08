@@ -23,6 +23,7 @@ import org.neo4j.agentmemory.MemoryClient;
 import org.neo4j.agentmemory.MemoryClientConfiguration;
 import org.neo4j.agentmemory.exception.MemoryServiceException;
 import org.neo4j.agentmemory.testsupport.HttpClientUnderTest;
+import org.neo4j.agentmemory.testsupport.OpenApiContract;
 
 @WireMockTest
 class LangChain4jHttpTransportTest {
@@ -43,8 +44,8 @@ class LangChain4jHttpTransportTest {
                 delegate.execute(request, parser, listener);
             }
         };
-        stubFor(get(urlEqualTo(PATH)).willReturn(aResponse().withHeader("Content-Type", "application/json")
-                .withBody("{\"id\":\"" + ID + "\"}")));
+        stubFor(get(urlEqualTo(PATH))
+                .willReturn(OpenApiContract.response("get", "/v1/conversations/{id}")));
         var client = MemoryClient.create(MemoryClientConfiguration.builder()
                 .baseUrl(server.getHttpBaseUrl() + "/v1").apiKey("api-key-secret")
                 .langChain4jHttpClient(httpClient, HttpClientUnderTest.TEST_EXECUTOR).build());
@@ -52,6 +53,8 @@ class LangChain4jHttpTransportTest {
         client.getConversation(ID).join();
 
         assertThat(calls).hasValue(1);
+        OpenApiContract.assertEveryExchangeMatchesTheContract();
+        OpenApiContract.assertOnlyDeclaredRequestProperties();
     }
 
     @Test

@@ -17,8 +17,8 @@ public final class LangChain4jHttpTransport implements HttpTransport {
     private final Executor executor;
 
     public LangChain4jHttpTransport(HttpClient httpClient, Executor executor) {
-        this.httpClient = httpClient;
-        this.executor = executor;
+        this.httpClient = Objects.requireNonNull(httpClient, "httpClient");
+        this.executor = Objects.requireNonNull(executor, "executor");
     }
 
     @Override

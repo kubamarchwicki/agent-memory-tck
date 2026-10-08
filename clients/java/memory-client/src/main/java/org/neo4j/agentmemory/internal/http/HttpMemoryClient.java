@@ -52,7 +52,6 @@ public final class HttpMemoryClient implements MemoryClient {
     }
 
     public static MemoryClient create(MemoryClientConfiguration configuration, HttpTransport transport) {
-        Objects.requireNonNull(configuration, "configuration");
         var jsonCodec = JsonCodecs.jackson3();
         var selectedTransport = transport == null
                 ? new JdkHttpTransport(HttpClient.newHttpClient()) : transport;
@@ -229,10 +228,10 @@ public final class HttpMemoryClient implements MemoryClient {
     public CompletableFuture<Void> deleteConversation(UUID conversationId) {
         var operation = "deleteConversation";
         return logging.call(operation, log -> {
-            var request = request("DELETE", "/conversations/{conversationId}",
+            var call = call("DELETE", "/conversations/{conversationId}",
                     Map.of("conversationId", conversationId), null);
-            return exchange(operation, request, log).thenApply(response -> {
-                requireSuccess(operation, response);
+            return exchange(operation, call, log).thenApply(result -> {
+                requireSuccess(operation, result);
                 return null;
             });
         });
@@ -241,8 +240,8 @@ public final class HttpMemoryClient implements MemoryClient {
     private <W, T> CompletableFuture<T> get(
             String operation, String path, Map<String, Object> variables, Class<W> wireType, Function<W, T> transform) {
         return logging.call(operation, log -> {
-            var request = request("GET", path, variables, null);
-            return exchangeAndDecode(operation, request, wireType, transform, log);
+            var call = call("GET", path, variables, null);
+            return exchangeAndDecode(operation, call, wireType, transform, log);
         });
     }
 
@@ -259,12 +258,12 @@ public final class HttpMemoryClient implements MemoryClient {
                         operation + " could not encode request JSON", failure));
             }
             log.phase(ClientLogging.Phase.REQUEST);
-            var request = request("POST", path, variables, body);
-            return exchangeAndDecode(operation, request, wireType, transform, log);
+            var call = call("POST", path, variables, body);
+            return exchangeAndDecode(operation, call, wireType, transform, log);
         });
     }
 
-    private HttpCall request(String method, String path, Map<String, Object> variables, byte[] body) {
+    private HttpCall call(String method, String path, Map<String, Object> variables, byte[] body) {
         var headers = new LinkedHashMap<String, String>();
         headers.put("Authorization", "Bearer " + apiKey);
         headers.put("Accept", "application/json");
@@ -275,36 +274,36 @@ public final class HttpMemoryClient implements MemoryClient {
 
     private <W, T> CompletableFuture<T> exchangeAndDecode(
             String operation,
-            HttpCall request,
+            HttpCall call,
             Class<W> wireType,
             Function<W, T> transform, ClientLogging.Operation log) {
-        return exchange(operation, request, log).thenApply(response -> {
-            requireSuccess(operation, response);
+        return exchange(operation, call, log).thenApply(result -> {
+            requireSuccess(operation, result);
             log.phase(ClientLogging.Phase.DECODE);
             try {
-                return transform.apply(jsonCodec.decode(response.body(), wireType));
+                return transform.apply(jsonCodec.decode(result.body(), wireType));
             } catch (RuntimeException failure) {
                 throw new ResponseDecodingException(
                         operation,
-                        response.status(),
-                        contentType(response),
-                        excerpt(response.body()),
+                        result.status(),
+                        result.contentType(),
+                        excerpt(result.body()),
                         failure);
             }
         });
     }
 
     private CompletableFuture<HttpResult> exchange(
-            String operation, HttpCall request, ClientLogging.Operation log) {
+            String operation, HttpCall call, ClientLogging.Operation log) {
         log.phase(ClientLogging.Phase.TRANSPORT);
         try {
-            return transport.send(request).handle((response, failure) -> {
+            return transport.send(call).handle((result, failure) -> {
                 if (failure != null) {
                     throw new MemoryClientException(
                             operation + " HTTP request failed", unwrap(failure));
                 }
-                log.response(response);
-                return response;
+                log.response(result);
+                return result;
             });
         } catch (RuntimeException failure) {
             return CompletableFuture.failedFuture(new MemoryClientException(
@@ -312,15 +311,14 @@ public final class HttpMemoryClient implements MemoryClient {
         }
     }
 
-    private static void requireSuccess(
-            String operation, HttpResult response) {
-        if (response.status() < 200 || response.status() >= 300) {
+    private static void requireSuccess(String operation, HttpResult result) {
+        if (!result.isSuccess()) {
             throw new MemoryServiceException(
                     operation,
-                    response.status(),
-                    response.headers(),
-                    contentType(response),
-                    excerpt(response.body()));
+                    result.status(),
+                    result.headers(),
+                    result.contentType(),
+                    excerpt(result.body()));
         }
     }
 
@@ -410,10 +408,6 @@ public final class HttpMemoryClient implements MemoryClient {
             current = current.getCause();
         }
         return current;
-    }
-
-    private static String contentType(HttpResult response) {
-        return response.firstHeader("Content-Type").orElse("");
     }
 
     private static String excerpt(byte[] body) {

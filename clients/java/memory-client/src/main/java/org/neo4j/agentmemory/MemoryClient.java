@@ -57,6 +57,8 @@ import java.util.concurrent.CompletableFuture;
  *
  * <p>The static {@code create} methods use the configured HTTP client,
  * or a new default JDK HTTP client when none is configured.
+ * Another adapter can implement this interface and bind the same live
+ * handle classes to itself.
  */
 public interface MemoryClient {
     /**

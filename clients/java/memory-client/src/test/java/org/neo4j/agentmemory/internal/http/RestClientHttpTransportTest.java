@@ -20,6 +20,7 @@ import org.neo4j.agentmemory.MemoryClient;
 import org.neo4j.agentmemory.MemoryClientConfiguration;
 import org.neo4j.agentmemory.exception.MemoryServiceException;
 import org.neo4j.agentmemory.testsupport.HttpClientUnderTest;
+import org.neo4j.agentmemory.testsupport.OpenApiContract;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
@@ -40,6 +41,7 @@ class RestClientHttpTransportTest {
         TestObservationRegistryAssert.assertThat(registry)
                 .hasObservationWithNameEqualTo("http.client.requests").that()
                 .hasLowCardinalityKeyValue("uri", "/v1/conversations/{conversationId}");
+        assertContract();
     }
 
     @Test
@@ -53,10 +55,11 @@ class RestClientHttpTransportTest {
         client(server, restClient).getConversation(ID).join();
 
         verify(getRequestedFor(urlEqualTo(PATH)).withHeader("X-App-Trace", equalTo("trace-1")));
+        assertContract();
     }
 
     @Test
-    void overridesRestClientBaseUrlAndCorrespondingDefaultHeaders(WireMockRuntimeInfo server) {
+    void ignoresRestClientBaseUrlAndDefaultHeaders(WireMockRuntimeInfo server) {
         var restClient = builder().baseUrl("http://wrong.invalid/api")
                 .defaultHeader("Authorization", "Bearer app-token")
                 .defaultHeader("Accept", "application/xml")
@@ -68,7 +71,8 @@ class RestClientHttpTransportTest {
         verify(getRequestedFor(urlEqualTo(PATH))
                 .withHeader("Authorization", equalTo("Bearer nams-key"))
                 .withHeader("Accept", equalTo("application/json"))
-                .withHeader("X-App-Tenant", equalTo("tenant-1")));
+                .withoutHeader("X-App-Tenant"));
+        assertContract();
     }
 
     @Test
@@ -99,8 +103,12 @@ class RestClientHttpTransportTest {
     }
 
     private static void stubConversation() {
-        stubFor(get(urlEqualTo(PATH)).willReturn(aResponse()
-                .withHeader("Content-Type", "application/json")
-                .withBody("{\"id\":\"" + ID + "\"}")));
+        stubFor(get(urlEqualTo(PATH))
+                .willReturn(OpenApiContract.response("get", "/v1/conversations/{id}")));
+    }
+
+    private static void assertContract() {
+        OpenApiContract.assertEveryExchangeMatchesTheContract();
+        OpenApiContract.assertOnlyDeclaredRequestProperties();
     }
 }

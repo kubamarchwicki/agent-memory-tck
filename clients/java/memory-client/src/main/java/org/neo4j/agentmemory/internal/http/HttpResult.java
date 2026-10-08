@@ -15,8 +15,16 @@ record HttpResult(int status, Map<String, List<String>> headers, byte[] body) {
         body = body == null ? new byte[0] : body;
     }
 
-    public Optional<String> firstHeader(String name) {
+    Optional<String> firstHeader(String name) {
         var values = headers.get(name);
         return values == null || values.isEmpty() ? Optional.empty() : Optional.of(values.get(0));
+    }
+
+    boolean isSuccess() {
+        return status >= 200 && status < 300;
+    }
+
+    String contentType() {
+        return firstHeader("Content-Type").orElse("");
     }
 }

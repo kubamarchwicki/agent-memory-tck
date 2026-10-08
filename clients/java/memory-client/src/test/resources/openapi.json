@@ -139,6 +139,9 @@
         },
         "type": {
           "type": "string"
+        },
+        "userId": {
+          "type": "string"
         }
       },
       "type": "object"
@@ -419,6 +422,18 @@
       ],
       "type": "object"
     },
+    "handlers.CrossUserErrorResponse": {
+      "properties": {
+        "error": {
+          "example": "cross_user_merge",
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
     "handlers.DeleteConversationResponse": {
       "properties": {
         "purged": {
@@ -426,6 +441,27 @@
         },
         "status": {
           "example": "deleted",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "handlers.DeleteUserMemoryResponse": {
+      "properties": {
+        "deleted": {
+          "$ref": "#/definitions/handlers.UserMemoryCounts"
+        },
+        "status": {
+          "description": "deleted, or incomplete when the call ran out of time first; repeating it continues",
+          "enum": [
+            "deleted",
+            "incomplete"
+          ],
+          "example": "deleted",
+          "type": "string"
+        },
+        "userId": {
+          "example": "alice",
           "type": "string"
         }
       },
@@ -481,6 +517,10 @@
         },
         "updatedAt": {
           "type": "string"
+        },
+        "userId": {
+          "description": "The user whose memory holds the entity; absent for a shared entity.",
+          "type": "string"
         }
       },
       "type": "object"
@@ -520,6 +560,10 @@
         },
         "updatedAt": {
           "type": "string"
+        },
+        "userId": {
+          "description": "The user whose memory holds the entity; absent for a shared entity.",
+          "type": "string"
         }
       },
       "type": "object"
@@ -554,6 +598,9 @@
           "type": "string"
         },
         "updatedAt": {
+          "type": "string"
+        },
+        "userId": {
           "type": "string"
         }
       },
@@ -620,6 +667,10 @@
         },
         "type": {
           "type": "string"
+        },
+        "userId": {
+          "description": "The user whose memory holds the entity; absent for a shared entity.",
+          "type": "string"
         }
       },
       "type": "object"
@@ -671,6 +722,10 @@
           "type": "array"
         },
         "nodeId": {
+          "type": "string"
+        },
+        "userId": {
+          "description": "Only this user's memory (exact match): an anchor outside it expands to\nnothing, and neighbors and edges are limited to it.",
           "type": "string"
         }
       },
@@ -786,6 +841,19 @@
         },
         "message": {
           "example": "purge must be \"extracted\" when given",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "handlers.InvalidUserIDResponse": {
+      "properties": {
+        "error": {
+          "example": "invalid_user_id",
+          "type": "string"
+        },
+        "message": {
+          "example": "exactly one non-empty userId is required",
           "type": "string"
         }
       },
@@ -1306,7 +1374,8 @@
             "db_unreachable",
             "cypher_error",
             "internal",
-            "client_disconnected"
+            "client_disconnected",
+            "user_partition_not_ready"
           ],
           "example": "database_unavailable",
           "type": "string"
@@ -1332,6 +1401,7 @@
             "cypher_error",
             "internal",
             "client_disconnected",
+            "user_partition_not_ready",
             "workspace_not_provisioned"
           ],
           "example": "workspace_not_provisioned",
@@ -1416,6 +1486,48 @@
         },
         "updated": {
           "type": "boolean"
+        }
+      },
+      "type": "object"
+    },
+    "handlers.UserMemoryCounts": {
+      "properties": {
+        "agentSteps": {
+          "example": 12,
+          "type": "integer"
+        },
+        "aliases": {
+          "example": 8,
+          "type": "integer"
+        },
+        "conversations": {
+          "example": 3,
+          "type": "integer"
+        },
+        "entities": {
+          "example": 40,
+          "type": "integer"
+        },
+        "messages": {
+          "example": 120,
+          "type": "integer"
+        },
+        "observations": {
+          "example": 4,
+          "type": "integer"
+        },
+        "reflections": {
+          "example": 1,
+          "type": "integer"
+        },
+        "relationships": {
+          "description": "Relationships between entities, not the links from an entity to the messages it was extracted from",
+          "example": 57,
+          "type": "integer"
+        },
+        "toolCalls": {
+          "example": 9,
+          "type": "integer"
         }
       },
       "type": "object"
@@ -2304,6 +2416,10 @@
         },
         "type": {
           "type": "string"
+        },
+        "userId": {
+          "description": "The user whose memory the entity belongs to. It resolves only against that\nuser's entities; omitted, it is shared and resolves only against shared ones.",
+          "type": "string"
         }
       },
       "required": [
@@ -2366,6 +2482,10 @@
           "type": "string"
         },
         "targetId": {
+          "type": "string"
+        },
+        "userId": {
+          "description": "The user whose memory both entities must belong to. Omitted, they must\nstill belong to the same user, or both be shared.",
           "type": "string"
         }
       },
@@ -2889,6 +3009,10 @@
         },
         "type": {
           "type": "string"
+        },
+        "userId": {
+          "description": "Only this user's entities (exact match); omit for every user's and the shared ones",
+          "type": "string"
         }
       },
       "required": [
@@ -2975,7 +3099,7 @@
           "type": "string"
         },
         "userId": {
-          "description": "Only search conversations created with this userId",
+          "description": "Only search the conversations created with this userId (exact match)",
           "type": "string"
         }
       },
@@ -3570,7 +3694,7 @@
       "name": "Apache 2.0"
     },
     "title": "NAMS Memory API",
-    "version": "1.0"
+    "version": "1.1.0"
   },
   "paths": {
     "/.well-known/jwks.json": {
@@ -4130,6 +4254,12 @@
               "$ref": "#/definitions/handlers.TenantUnavailableResponse"
             }
           },
+          "424": {
+            "description": "The workspace's external database failed the request (external_database_error) - only its owner can fix it: check that it is running and that the connection on the Database page is correct",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantQueryErrorResponse"
+            }
+          },
           "500": {
             "description": "Internal error (cypher_error or internal)",
             "schema": {
@@ -4157,7 +4287,7 @@
         "consumes": [
           "application/json"
         ],
-        "description": "Create a new conversation session. The ID is always server-assigned - an id supplied in the body is ignored, so callers must use the returned ID for all subsequent message, context, and search calls. The body is optional, and an empty body or null is treated as {}. Otherwise it must be a single JSON object carrying only userId, metadata or id; any other field (such as user_id), or data after the object, is rejected with 400 rather than dropped. Entity extraction runs asynchronously after messages are added.",
+        "description": "Create a new conversation session. The ID is always server-assigned - an id supplied in the body is ignored, so callers must use the returned ID for all subsequent message, context, and search calls. The body is optional, and an empty body or null is treated as {}. Otherwise it must be a single JSON object carrying only userId, metadata or id; any other field (such as user_id), or data after the object, is rejected with 400 rather than dropped. Entity extraction runs asynchronously after messages are added. userId decides whose memory the extracted entities belong to; without it they are shared. It scopes data for a trusted backend and is not an access-control boundary.",
         "parameters": [
           {
             "description": "Optional user ID and metadata",
@@ -4184,10 +4314,28 @@
               "$ref": "#/definitions/handlers.ErrorResponse"
             }
           },
+          "409": {
+            "description": "Workspace database removed (database_unavailable), or workspace deprovisioned ({error: workspace_not_provisioned, status: deprovisioned}) - reprovision or update the external connection",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantUnavailableResponse"
+            }
+          },
+          "424": {
+            "description": "The workspace's external database failed the request - only its owner can fix it: check that it is running and that the connection on the Database page is correct",
+            "schema": {
+              "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          },
           "500": {
             "description": "Internal error",
             "schema": {
               "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          },
+          "503": {
+            "description": "Workspace database unreachable (db_unreachable); also returned as {error: workspace_not_provisioned, status, statusMessage} while the workspace is pending/provisioning/error",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantUnavailableResponse"
             }
           }
         },
@@ -4239,10 +4387,28 @@
               "$ref": "#/definitions/handlers.InvalidPurgeResponse"
             }
           },
+          "409": {
+            "description": "Workspace database removed (database_unavailable), or workspace deprovisioned ({error: workspace_not_provisioned, status: deprovisioned}) - reprovision or update the external connection",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantUnavailableResponse"
+            }
+          },
+          "424": {
+            "description": "The workspace's external database failed the request - only its owner can fix it: check that it is running and that the connection on the Database page is correct",
+            "schema": {
+              "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          },
           "500": {
             "description": "Internal error",
             "schema": {
               "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          },
+          "503": {
+            "description": "Workspace database unreachable (db_unreachable); also returned as {error: workspace_not_provisioned, status, statusMessage} while the workspace is pending/provisioning/error",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantUnavailableResponse"
             }
           }
         },
@@ -4283,10 +4449,28 @@
               "$ref": "#/definitions/handlers.ErrorResponse"
             }
           },
+          "409": {
+            "description": "Workspace database removed (database_unavailable), or workspace deprovisioned ({error: workspace_not_provisioned, status: deprovisioned}) - reprovision or update the external connection",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantUnavailableResponse"
+            }
+          },
+          "424": {
+            "description": "The workspace's external database failed the request - only its owner can fix it: check that it is running and that the connection on the Database page is correct",
+            "schema": {
+              "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          },
           "500": {
             "description": "Internal error",
             "schema": {
               "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          },
+          "503": {
+            "description": "Workspace database unreachable (db_unreachable); also returned as {error: workspace_not_provisioned, status, statusMessage} while the workspace is pending/provisioning/error",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantUnavailableResponse"
             }
           }
         },
@@ -4323,10 +4507,28 @@
               "$ref": "#/definitions/handlers.ContextResponse"
             }
           },
+          "409": {
+            "description": "Workspace database removed (database_unavailable), or workspace deprovisioned ({error: workspace_not_provisioned, status: deprovisioned}) - reprovision or update the external connection",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantUnavailableResponse"
+            }
+          },
+          "424": {
+            "description": "The workspace's external database failed the request - only its owner can fix it: check that it is running and that the connection on the Database page is correct",
+            "schema": {
+              "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          },
           "500": {
             "description": "Internal error",
             "schema": {
               "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          },
+          "503": {
+            "description": "Workspace database unreachable (db_unreachable); also returned as {error: workspace_not_provisioned, status, statusMessage} while the workspace is pending/provisioning/error",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantUnavailableResponse"
             }
           }
         },
@@ -4362,6 +4564,24 @@
             "schema": {
               "additionalProperties": true,
               "type": "object"
+            }
+          },
+          "409": {
+            "description": "Workspace database removed (database_unavailable), or workspace deprovisioned ({error: workspace_not_provisioned, status: deprovisioned}) - reprovision or update the external connection",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantUnavailableResponse"
+            }
+          },
+          "424": {
+            "description": "The workspace's external database failed the request - only its owner can fix it: check that it is running and that the connection on the Database page is correct",
+            "schema": {
+              "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          },
+          "503": {
+            "description": "Workspace database unreachable (db_unreachable); also returned as {error: workspace_not_provisioned, status, statusMessage} while the workspace is pending/provisioning/error",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantUnavailableResponse"
             }
           }
         },
@@ -4410,10 +4630,28 @@
               "$ref": "#/definitions/handlers.InvalidLimitResponse"
             }
           },
+          "409": {
+            "description": "Workspace database removed (database_unavailable), or workspace deprovisioned ({error: workspace_not_provisioned, status: deprovisioned}) - reprovision or update the external connection",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantUnavailableResponse"
+            }
+          },
+          "424": {
+            "description": "The workspace's external database failed the request - only its owner can fix it: check that it is running and that the connection on the Database page is correct",
+            "schema": {
+              "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          },
           "500": {
             "description": "Internal error",
             "schema": {
               "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          },
+          "503": {
+            "description": "Workspace database unreachable (db_unreachable); also returned as {error: workspace_not_provisioned, status, statusMessage} while the workspace is pending/provisioning/error",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantUnavailableResponse"
             }
           }
         },
@@ -4472,10 +4710,28 @@
               "$ref": "#/definitions/handlers.ErrorResponse"
             }
           },
+          "409": {
+            "description": "Workspace database removed (database_unavailable), or workspace deprovisioned ({error: workspace_not_provisioned, status: deprovisioned}) - reprovision or update the external connection",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantUnavailableResponse"
+            }
+          },
+          "424": {
+            "description": "The workspace's external database failed the request - only its owner can fix it: check that it is running and that the connection on the Database page is correct",
+            "schema": {
+              "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          },
           "500": {
             "description": "Internal error",
             "schema": {
               "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          },
+          "503": {
+            "description": "Workspace database unreachable (db_unreachable); also returned as {error: workspace_not_provisioned, status, statusMessage} while the workspace is pending/provisioning/error",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantUnavailableResponse"
             }
           }
         },
@@ -4536,10 +4792,28 @@
               "$ref": "#/definitions/handlers.ErrorResponse"
             }
           },
+          "409": {
+            "description": "Workspace database removed (database_unavailable), or workspace deprovisioned ({error: workspace_not_provisioned, status: deprovisioned}) - reprovision or update the external connection",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantUnavailableResponse"
+            }
+          },
+          "424": {
+            "description": "The workspace's external database failed the request - only its owner can fix it: check that it is running and that the connection on the Database page is correct",
+            "schema": {
+              "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          },
           "500": {
             "description": "Internal error",
             "schema": {
               "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          },
+          "503": {
+            "description": "Workspace database unreachable (db_unreachable); also returned as {error: workspace_not_provisioned, status, statusMessage} while the workspace is pending/provisioning/error",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantUnavailableResponse"
             }
           }
         },
@@ -4588,10 +4862,28 @@
               "$ref": "#/definitions/handlers.InvalidLimitResponse"
             }
           },
+          "409": {
+            "description": "Workspace database removed (database_unavailable), or workspace deprovisioned ({error: workspace_not_provisioned, status: deprovisioned}) - reprovision or update the external connection",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantUnavailableResponse"
+            }
+          },
+          "424": {
+            "description": "The workspace's external database failed the request - only its owner can fix it: check that it is running and that the connection on the Database page is correct",
+            "schema": {
+              "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          },
           "500": {
             "description": "Internal error",
             "schema": {
               "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          },
+          "503": {
+            "description": "Workspace database unreachable (db_unreachable); also returned as {error: workspace_not_provisioned, status, statusMessage} while the workspace is pending/provisioning/error",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantUnavailableResponse"
             }
           }
         },
@@ -4628,10 +4920,28 @@
               "$ref": "#/definitions/handlers.ReflectionsResponse"
             }
           },
+          "409": {
+            "description": "Workspace database removed (database_unavailable), or workspace deprovisioned ({error: workspace_not_provisioned, status: deprovisioned}) - reprovision or update the external connection",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantUnavailableResponse"
+            }
+          },
+          "424": {
+            "description": "The workspace's external database failed the request - only its owner can fix it: check that it is running and that the connection on the Database page is correct",
+            "schema": {
+              "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          },
           "500": {
             "description": "Internal error",
             "schema": {
               "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          },
+          "503": {
+            "description": "Workspace database unreachable (db_unreachable); also returned as {error: workspace_not_provisioned, status, statusMessage} while the workspace is pending/provisioning/error",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantUnavailableResponse"
             }
           }
         },
@@ -4651,7 +4961,7 @@
         "consumes": [
           "application/json"
         ],
-        "description": "Search one conversation's messages by content. Uses vector similarity search when embeddings are available, falling back to text CONTAINS. Returns searchType field indicating which method was used. Each message carries its metadata and conversationId. Unknown body fields are rejected.",
+        "description": "Search one conversation's messages by content. Uses vector similarity search when embeddings are available, falling back to a case-insensitive text match on content. searchType reports which path answered. limit applies to both paths. Each message carries its metadata and conversationId. Unknown body fields are rejected.",
         "parameters": [
           {
             "description": "Conversation ID",
@@ -4686,10 +4996,28 @@
               "$ref": "#/definitions/handlers.ErrorResponse"
             }
           },
+          "409": {
+            "description": "Workspace database removed (database_unavailable), or workspace deprovisioned ({error: workspace_not_provisioned, status: deprovisioned}) - reprovision or update the external connection",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantUnavailableResponse"
+            }
+          },
+          "424": {
+            "description": "The workspace's external database failed the request - only its owner can fix it: check that it is running and that the connection on the Database page is correct",
+            "schema": {
+              "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          },
           "500": {
             "description": "Internal error",
             "schema": {
               "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          },
+          "503": {
+            "description": "Workspace database unreachable (db_unreachable); also returned as {error: workspace_not_provisioned, status, statusMessage} while the workspace is pending/provisioning/error",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantUnavailableResponse"
             }
           }
         },
@@ -4706,12 +5034,18 @@
     },
     "/v1/entities": {
       "get": {
-        "description": "List entities in the knowledge graph, most recently updated first. Filter by type using the optional query parameter.",
+        "description": "List entities in the knowledge graph, most recently updated first. Filter by type or by user using the optional query parameters. userId scopes data for a trusted backend and is not an access-control boundary.",
         "parameters": [
           {
             "description": "Filter by type: person, organization, location, concept, tool, custom",
             "in": "query",
             "name": "type",
+            "type": "string"
+          },
+          {
+            "description": "Only this user's entities (exact match); omit for every user's and the shared ones",
+            "in": "query",
+            "name": "userId",
             "type": "string"
           },
           {
@@ -4749,6 +5083,12 @@
               "$ref": "#/definitions/handlers.TenantUnavailableResponse"
             }
           },
+          "424": {
+            "description": "The workspace's external database failed the request (external_database_error) - only its owner can fix it: check that it is running and that the connection on the Database page is correct",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantQueryErrorResponse"
+            }
+          },
           "500": {
             "description": "Internal error (cypher_error or internal)",
             "schema": {
@@ -4776,7 +5116,7 @@
         "consumes": [
           "application/json"
         ],
-        "description": "Create a new entity in the knowledge graph. Entities are automatically created during entity extraction, but can also be created manually. The name is first resolved against existing entities: a confident match merges onto the existing entity and returns 200 with resolution \"merged\" and merged_into, an uncertain one creates the entity with resolution \"review_pending\" and duplicate_of and queues the pair for review, and otherwise the entity is created with resolution \"created\". The type is validated against the workspace's active ontology, which rejects an undeclared type or a declared type missing a required property with 422 schema_violation.",
+        "description": "Create a new entity in the knowledge graph. Entities are automatically created during entity extraction, but can also be created manually. The name is first resolved against existing entities: a confident match merges onto the existing entity and returns 200 with resolution \"merged\" and merged_into, an uncertain one creates the entity with resolution \"review_pending\" and duplicate_of and queues the pair for review, and otherwise the entity is created with resolution \"created\". The type is validated against the workspace's active ontology, which rejects an undeclared type or a declared type missing a required property with 422 schema_violation. With userId the entity belongs to that user's memory and resolves only against that user's entities; without it the entity is shared and resolves only against shared ones. userId scopes data for a trusted backend and is not an access-control boundary.",
         "parameters": [
           {
             "description": "Entity name, type, and optional description",
@@ -4811,8 +5151,20 @@
               "$ref": "#/definitions/handlers.ErrorResponse"
             }
           },
+          "409": {
+            "description": "Workspace database removed (database_unavailable), or workspace deprovisioned ({error: workspace_not_provisioned, status: deprovisioned}) - reprovision or update the external connection",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantUnavailableResponse"
+            }
+          },
           "422": {
             "description": "schema_violation: the type is undeclared or a required property is missing",
+            "schema": {
+              "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          },
+          "424": {
+            "description": "The workspace's external database failed the request - only its owner can fix it: check that it is running and that the connection on the Database page is correct",
             "schema": {
               "$ref": "#/definitions/handlers.ErrorResponse"
             }
@@ -4821,6 +5173,12 @@
             "description": "Internal error",
             "schema": {
               "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          },
+          "503": {
+            "description": "user_partition_not_ready: userId was given before this workspace's existing memory was assigned to users; retry after Retry-After seconds; or the workspace database is unreachable (db_unreachable); also returned as {error: workspace_not_provisioned, status, statusMessage} while the workspace is pending/provisioning/error",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantUnavailableResponse"
             }
           }
         },
@@ -4840,7 +5198,7 @@
         "consumes": [
           "application/json"
         ],
-        "description": "Create multiple entities in one request (the bulk form of POST /v1/entities), max 100. Each entity goes through the same shared core as the single endpoint — ontology validation, resolve-before-create, review-queue flagging, PII scrub, typed properties, embeddings — so behavior cannot drift. Entities are processed in order and resolve against those created earlier in the same request, so an in-request duplicate merges instead of forking. A rejected or failed entity is reported in its result entry and never aborts the batch; the response always returns 200 with a per-entity results array.",
+        "description": "Create multiple entities in one request (the bulk form of POST /v1/entities), max 100. Each entity goes through the same shared core as the single endpoint — ontology validation, resolve-before-create within its userId's memory, review-queue flagging, PII scrub, typed properties, embeddings — so behavior cannot drift. Each entity carries its own optional userId. Entities are processed in order and resolve against those created earlier in the same request, so an in-request duplicate merges instead of forking. A rejected or failed entity is reported in its result entry and never aborts the batch; the response always returns 200 with a per-entity results array.",
         "parameters": [
           {
             "description": "Array of entities",
@@ -4866,6 +5224,24 @@
             "description": "Empty or oversized batch",
             "schema": {
               "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          },
+          "409": {
+            "description": "Workspace database removed (database_unavailable), or workspace deprovisioned ({error: workspace_not_provisioned, status: deprovisioned}) - reprovision or update the external connection",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantUnavailableResponse"
+            }
+          },
+          "424": {
+            "description": "The workspace's external database failed the request (external_database_error) - only its owner can fix it: check that it is running and that the connection on the Database page is correct",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantQueryErrorResponse"
+            }
+          },
+          "503": {
+            "description": "user_partition_not_ready: an entity names a userId before this workspace's existing memory was assigned to users; retry after Retry-After seconds; nothing is written; or the workspace database is unreachable (db_unreachable); also returned as {error: workspace_not_provisioned, status, statusMessage} while the workspace is pending/provisioning/error",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantUnavailableResponse"
             }
           }
         },
@@ -4898,6 +5274,12 @@
             "type": "string"
           },
           {
+            "description": "Only this user's entities (exact match), judged on the canonical entity",
+            "in": "query",
+            "name": "userId",
+            "type": "string"
+          },
+          {
             "description": "Maximum matches to return (1-100, default 25)",
             "in": "query",
             "name": "limit",
@@ -4920,10 +5302,28 @@
               "$ref": "#/definitions/handlers.ErrorResponse"
             }
           },
+          "409": {
+            "description": "Workspace database removed (database_unavailable), or workspace deprovisioned ({error: workspace_not_provisioned, status: deprovisioned}) - reprovision or update the external connection",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantUnavailableResponse"
+            }
+          },
+          "424": {
+            "description": "The workspace's external database failed the request (external_database_error) - only its owner can fix it: check that it is running and that the connection on the Database page is correct",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantQueryErrorResponse"
+            }
+          },
           "500": {
             "description": "Tenant database failure",
             "schema": {
               "$ref": "#/definitions/handlers.TenantQueryErrorResponse"
+            }
+          },
+          "503": {
+            "description": "Workspace database unreachable (db_unreachable); also returned as {error: workspace_not_provisioned, status, statusMessage} while the workspace is pending/provisioning/error",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantUnavailableResponse"
             }
           }
         },
@@ -4940,7 +5340,15 @@
     },
     "/v1/entities/count": {
       "get": {
-        "description": "Returns the count of canonical (non-merged) entities in the workspace. A cheap signal the Memory Browser polls to surface a \"new entities available\" refresh affordance without re-fetching the full graph.",
+        "description": "Returns the count of canonical (non-merged) entities in the workspace, or in one user's memory with userId. A cheap signal the Memory Browser polls to surface a \"new entities available\" refresh affordance without re-fetching the full graph.",
+        "parameters": [
+          {
+            "description": "Only this user's entities (exact match)",
+            "in": "query",
+            "name": "userId",
+            "type": "string"
+          }
+        ],
         "produces": [
           "application/json"
         ],
@@ -4969,6 +5377,12 @@
               "$ref": "#/definitions/handlers.TenantUnavailableResponse"
             }
           },
+          "424": {
+            "description": "The workspace's external database failed the request (external_database_error) - only its owner can fix it: check that it is running and that the connection on the Database page is correct",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantQueryErrorResponse"
+            }
+          },
           "500": {
             "description": "Internal error (cypher_error or internal)",
             "schema": {
@@ -4995,13 +5409,19 @@
     },
     "/v1/entities/graph": {
       "get": {
-        "description": "Get the entity graph as nodes and edges for visualization, used by the Memory Browser in the dashboard. Only canonical entities are nodes: merged-away entities are excluded, and each edge's endpoints resolve to their canonical entity, so a relationship absorbed by a merge re-attaches to the visible entity. Every edge carries a stable, deterministic id. Merge plumbing (MERGED_REL, SAME_AS) is excluded.",
+        "description": "Get the entity graph as nodes and edges for visualization, used by the Memory Browser in the dashboard. Only canonical entities are nodes: merged-away entities are excluded, and each edge's endpoints resolve to their canonical entity, so a relationship absorbed by a merge re-attaches to the visible entity. Every edge carries a stable, deterministic id. Merge plumbing (MERGED_REL, SAME_AS) is excluded. With userId, only that user's entities and the relationships among them.",
         "parameters": [
           {
             "description": "Max nodes to return (1-1000, default 250)",
             "in": "query",
             "name": "limit",
             "type": "integer"
+          },
+          {
+            "description": "Only this user's entities (exact match)",
+            "in": "query",
+            "name": "userId",
+            "type": "string"
           }
         ],
         "produces": [
@@ -5030,6 +5450,12 @@
             "description": "Workspace database removed (database_unavailable), or workspace deprovisioned ({error: workspace_not_provisioned, status: deprovisioned}) - reprovision or update the external connection",
             "schema": {
               "$ref": "#/definitions/handlers.TenantUnavailableResponse"
+            }
+          },
+          "424": {
+            "description": "The workspace's external database failed the request (external_database_error) - only its owner can fix it: check that it is running and that the connection on the Database page is correct",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantQueryErrorResponse"
             }
           },
           "500": {
@@ -5061,10 +5487,10 @@
         "consumes": [
           "application/json"
         ],
-        "description": "Search entities by name or description. Uses vector similarity search when embeddings are available, falling back to text CONTAINS. Returns searchType field indicating which method was used. Unknown body fields are rejected, so a misspelled filter cannot silently widen the search.",
+        "description": "Search entities by name or description. Uses vector similarity search when embeddings are available. When the vector path cannot answer (no embedding service, no vector index, or no vector hits) it falls back to a case-insensitive text match on name and description, ranked by the entity fulltext index when present. searchType reports which path answered. limit applies to both paths. userId narrows every path to one user's entities by exact match, and a user with a small share of the workspace still gets their matches; it scopes data for a trusted backend and is not an access-control boundary. Unknown body fields are rejected, so a misspelled filter cannot silently widen the search.",
         "parameters": [
           {
-            "description": "Search query with optional type filter and limit",
+            "description": "Search query with optional type and user filters and limit",
             "in": "body",
             "name": "body",
             "required": true,
@@ -5089,10 +5515,28 @@
               "$ref": "#/definitions/handlers.ErrorResponse"
             }
           },
+          "409": {
+            "description": "Workspace database removed (database_unavailable), or workspace deprovisioned ({error: workspace_not_provisioned, status: deprovisioned}) - reprovision or update the external connection",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantUnavailableResponse"
+            }
+          },
+          "424": {
+            "description": "The workspace's external database failed the request - only its owner can fix it: check that it is running and that the connection on the Database page is correct",
+            "schema": {
+              "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          },
           "500": {
             "description": "Internal error",
             "schema": {
               "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          },
+          "503": {
+            "description": "Workspace database unreachable (db_unreachable); also returned as {error: workspace_not_provisioned, status, statusMessage} while the workspace is pending/provisioning/error",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantUnavailableResponse"
             }
           }
         },
@@ -5129,10 +5573,28 @@
               "$ref": "#/definitions/handlers.StatusResponse"
             }
           },
+          "409": {
+            "description": "Workspace database removed (database_unavailable), or workspace deprovisioned ({error: workspace_not_provisioned, status: deprovisioned}) - reprovision or update the external connection",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantUnavailableResponse"
+            }
+          },
+          "424": {
+            "description": "The workspace's external database failed the request - only its owner can fix it: check that it is running and that the connection on the Database page is correct",
+            "schema": {
+              "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          },
           "500": {
             "description": "Internal error",
             "schema": {
               "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          },
+          "503": {
+            "description": "Workspace database unreachable (db_unreachable); also returned as {error: workspace_not_provisioned, status, statusMessage} while the workspace is pending/provisioning/error",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantUnavailableResponse"
             }
           }
         },
@@ -5147,13 +5609,19 @@
         ]
       },
       "get": {
-        "description": "Get entity details including all relationships. Each relationship carries the edge's stable `id` (for one created through POST /v1/relationships, the id that call returned) and its type as `relationshipType` (`relType` is a deprecated alias that always equals it). It is reported relative to this entity: `direction` is \"out\" for (entity)-[relationshipType]-\u003e(target) and \"in\" for (target)-[relationshipType]-\u003e(entity), and the `target*` fields always describe the other entity. Merge plumbing (SAME_AS, MERGED_REL) is excluded. Only a completed merge redirects an endpoint (pending, rejected and skipped review pairs redirect nothing): a merged-away endpoint is reported as the entity it was merged into, and edges left on entities merged into this one are included. An entity merged without a SAME_AS link to the entity it was merged into, such as a redirected review, has no link to follow, so its edges are omitted at both ends and the list can be incomplete around it. An edge that resolves back to this entity is dropped. There is one relationship per distinct (direction, relationshipType, targetId), outgoing before incoming, then by relationshipType and target name; when merges leave several edges stating one, the edge between the canonical entities themselves is reported, then the one with the lowest id. relationships is an empty array when there are none.",
+        "description": "Get entity details including all relationships. Each relationship carries the edge's stable `id` (for one created through POST /v1/relationships, the id that call returned) and its type as `relationshipType` (`relType` is a deprecated alias that always equals it). It is reported relative to this entity: `direction` is \"out\" for (entity)-[relationshipType]-\u003e(target) and \"in\" for (target)-[relationshipType]-\u003e(entity), and the `target*` fields always describe the other entity. Merge plumbing (SAME_AS, MERGED_REL) is excluded. Only a completed merge redirects an endpoint (pending, rejected and skipped review pairs redirect nothing): a merged-away endpoint is reported as the entity it was merged into, and edges left on entities merged into this one are included. An entity merged without a SAME_AS link to the entity it was merged into, such as a redirected review, has no link to follow, so its edges are omitted at both ends and the list can be incomplete around it. An edge that resolves back to this entity is dropped. There is one relationship per distinct (direction, relationshipType, targetId), outgoing before incoming, then by relationshipType and target name; when merges leave several edges stating one, the edge between the canonical entities themselves is reported, then the one with the lowest id. relationships is an empty array when there are none. With userId, an entity outside that user's memory is not found, and only relationships to that user's entities are returned.",
         "parameters": [
           {
             "description": "Entity ID",
             "in": "path",
             "name": "id",
             "required": true,
+            "type": "string"
+          },
+          {
+            "description": "Only within this user's memory (exact match)",
+            "in": "query",
+            "name": "userId",
             "type": "string"
           }
         ],
@@ -5168,7 +5636,19 @@
             }
           },
           "404": {
-            "description": "Not found",
+            "description": "Not found, or not this user's",
+            "schema": {
+              "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          },
+          "409": {
+            "description": "Workspace database removed (database_unavailable), or workspace deprovisioned ({error: workspace_not_provisioned, status: deprovisioned}) - reprovision or update the external connection",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantUnavailableResponse"
+            }
+          },
+          "424": {
+            "description": "The workspace's external database failed the request - only its owner can fix it: check that it is running and that the connection on the Database page is correct",
             "schema": {
               "$ref": "#/definitions/handlers.ErrorResponse"
             }
@@ -5177,6 +5657,12 @@
             "description": "Internal error",
             "schema": {
               "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          },
+          "503": {
+            "description": "Workspace database unreachable (db_unreachable); also returned as {error: workspace_not_provisioned, status, statusMessage} while the workspace is pending/provisioning/error",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantUnavailableResponse"
             }
           }
         },
@@ -5229,10 +5715,28 @@
               "$ref": "#/definitions/handlers.ErrorResponse"
             }
           },
+          "409": {
+            "description": "Workspace database removed (database_unavailable), or workspace deprovisioned ({error: workspace_not_provisioned, status: deprovisioned}) - reprovision or update the external connection",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantUnavailableResponse"
+            }
+          },
+          "424": {
+            "description": "The workspace's external database failed the request - only its owner can fix it: check that it is running and that the connection on the Database page is correct",
+            "schema": {
+              "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          },
           "500": {
             "description": "Internal error",
             "schema": {
               "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          },
+          "503": {
+            "description": "Workspace database unreachable (db_unreachable); also returned as {error: workspace_not_provisioned, status, statusMessage} while the workspace is pending/provisioning/error",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantUnavailableResponse"
             }
           }
         },
@@ -5287,10 +5791,28 @@
               "$ref": "#/definitions/handlers.ErrorResponse"
             }
           },
+          "409": {
+            "description": "Workspace database removed (database_unavailable), or workspace deprovisioned ({error: workspace_not_provisioned, status: deprovisioned}) - reprovision or update the external connection",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantUnavailableResponse"
+            }
+          },
+          "424": {
+            "description": "The workspace's external database failed the request - only its owner can fix it: check that it is running and that the connection on the Database page is correct",
+            "schema": {
+              "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          },
           "500": {
             "description": "Internal error",
             "schema": {
               "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          },
+          "503": {
+            "description": "Workspace database unreachable (db_unreachable); also returned as {error: workspace_not_provisioned, status, statusMessage} while the workspace is pending/provisioning/error",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantUnavailableResponse"
             }
           }
         },
@@ -5307,13 +5829,19 @@
     },
     "/v1/entities/{id}/history": {
       "get": {
-        "description": "Get cross-conversation history - all messages that mention this entity, across all conversations in the workspace.",
+        "description": "Get cross-conversation history - all messages that mention this entity, across all conversations in the workspace. With userId, an entity outside that user's memory has no history, and only that user's conversations are read.",
         "parameters": [
           {
             "description": "Entity ID",
             "in": "path",
             "name": "id",
             "required": true,
+            "type": "string"
+          },
+          {
+            "description": "Only within this user's memory (exact match)",
+            "in": "query",
+            "name": "userId",
             "type": "string"
           }
         ],
@@ -5327,10 +5855,28 @@
               "$ref": "#/definitions/handlers.EntityProvenanceResponse"
             }
           },
+          "409": {
+            "description": "Workspace database removed (database_unavailable), or workspace deprovisioned ({error: workspace_not_provisioned, status: deprovisioned}) - reprovision or update the external connection",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantUnavailableResponse"
+            }
+          },
+          "424": {
+            "description": "The workspace's external database failed the request - only its owner can fix it: check that it is running and that the connection on the Database page is correct",
+            "schema": {
+              "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          },
           "500": {
             "description": "Internal error",
             "schema": {
               "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          },
+          "503": {
+            "description": "Workspace database unreachable (db_unreachable); also returned as {error: workspace_not_provisioned, status, statusMessage} while the workspace is pending/provisioning/error",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantUnavailableResponse"
             }
           }
         },
@@ -5350,7 +5896,7 @@
         "consumes": [
           "application/json"
         ],
-        "description": "Merge the source entity into a target entity. All relationships are transferred to the target. A SAME_AS relationship is created for provenance. The source entity is not deleted but becomes inert.",
+        "description": "Merge the source entity into a target entity. All relationships are transferred to the target. A SAME_AS relationship is created for provenance. The source entity is not deleted but becomes inert. Both entities must belong to the same user's memory (or both be shared); otherwise 422 cross_user_merge. While the workspace's existing memory is still being assigned to users, merges answer 503 user_partition_not_ready with Retry-After.",
         "parameters": [
           {
             "description": "Source entity ID",
@@ -5391,10 +5937,34 @@
               "$ref": "#/definitions/handlers.ErrorResponse"
             }
           },
+          "409": {
+            "description": "Workspace database removed (database_unavailable), or workspace deprovisioned ({error: workspace_not_provisioned, status: deprovisioned}) - reprovision or update the external connection",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantUnavailableResponse"
+            }
+          },
+          "422": {
+            "description": "cross_user_merge: the entities belong to different users (or one is shared)",
+            "schema": {
+              "$ref": "#/definitions/handlers.CrossUserErrorResponse"
+            }
+          },
+          "424": {
+            "description": "The workspace's external database failed the request (external_database_error) - only its owner can fix it: check that it is running and that the connection on the Database page is correct",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantQueryErrorResponse"
+            }
+          },
           "500": {
             "description": "Internal error",
             "schema": {
               "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          },
+          "503": {
+            "description": "user_partition_not_ready: the workspace's existing memory is still being assigned to users; retry after Retry-After seconds; or the workspace database is unreachable (db_unreachable); also returned as {error: workspace_not_provisioned, status, statusMessage} while the workspace is pending/provisioning/error",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantUnavailableResponse"
             }
           }
         },
@@ -5506,7 +6076,7 @@
         "consumes": [
           "application/json"
         ],
-        "description": "Returns the 1-hop neighborhood of a node (any memory label: Entity, Message, Conversation, Observation, Reflection, AgentStep, ToolCall) plus the complete, canonical-resolved set of relationships among the resulting node set (the new neighbors together with loadedIds), for the Memory Browser. Omitting loadedIds is the same as sending an empty list. Provenance edges (MENTIONS/INFLUENCED, with the paired EXTRACTED_FROM metadata collapsed in) are included; merge plumbing (MERGED_REL/SAME_AS) is excluded. New neighbors are capped at 200, with truncation metadata rather than a silent drop.",
+        "description": "Returns the 1-hop neighborhood of a node (any memory label: Entity, Message, Conversation, Observation, Reflection, AgentStep, ToolCall) plus the complete, canonical-resolved set of relationships among the resulting node set (the new neighbors together with loadedIds), for the Memory Browser. Omitting loadedIds is the same as sending an empty list. Provenance edges (MENTIONS/INFLUENCED, with the paired EXTRACTED_FROM metadata collapsed in) are included; merge plumbing (MERGED_REL/SAME_AS) is excluded. New neighbors are capped at 200, with truncation metadata rather than a silent drop. With userId, a node outside that user's memory expands to nothing, and only nodes in that user's memory (their entities, and their conversations with what those hold) are returned.",
         "parameters": [
           {
             "description": "nodeId to expand and the currently-loaded node ids",
@@ -5534,10 +6104,28 @@
               "$ref": "#/definitions/handlers.ErrorResponse"
             }
           },
+          "409": {
+            "description": "Workspace database removed (database_unavailable), or workspace deprovisioned ({error: workspace_not_provisioned, status: deprovisioned}) - reprovision or update the external connection",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantUnavailableResponse"
+            }
+          },
+          "424": {
+            "description": "The workspace's external database failed the request (external_database_error) - only its owner can fix it: check that it is running and that the connection on the Database page is correct",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantQueryErrorResponse"
+            }
+          },
           "500": {
             "description": "Internal error",
             "schema": {
               "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          },
+          "503": {
+            "description": "Workspace database unreachable (db_unreachable); also returned as {error: workspace_not_provisioned, status, statusMessage} while the workspace is pending/provisioning/error",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantUnavailableResponse"
             }
           }
         },
@@ -5552,12 +6140,82 @@
         ]
       }
     },
+    "/v1/memory": {
+      "delete": {
+        "description": "Delete everything stored for one end user, identified by `userId`: every conversation created with that `userId`, with everything it owns (messages, observations, reflections, agent steps and the tool calls recorded against those steps), and every entity in that user's memory, with its aliases and all of its relationships. Shared entities and other users' memory are untouched; a shared entity extracted from this user's conversations stays and loses only its links to the deleted messages, steps and tool calls.\n\nMemory is removed in batches, each committed as it goes. When a user holds more than one call can remove in time, the response has `status: \"incomplete\"` and the counts removed so far; repeat the call until `status` is `deleted`. The call is idempotent: once it has completed, repeating it removes nothing and returns zero counts. Repeating it also removes what an extraction already running for one of the user's messages wrote after the call returned.\n\n`userId` is compared exactly, as on every other surface, and is required: a missing, empty or repeated `userId` is rejected with 400 and deletes nothing. While the workspace's existing memory is still being assigned to users, the call answers 503 `user_partition_not_ready` with a `Retry-After` header and deletes nothing. `userId` scopes data for a trusted backend and is not an access-control boundary. Requires both `memory:write` and `entities:write`.",
+        "parameters": [
+          {
+            "description": "The user whose memory to delete (exact match)",
+            "in": "query",
+            "name": "userId",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {
+            "description": "status deleted or incomplete, with the counts this call removed",
+            "schema": {
+              "$ref": "#/definitions/handlers.DeleteUserMemoryResponse"
+            }
+          },
+          "400": {
+            "description": "invalid_user_id",
+            "schema": {
+              "$ref": "#/definitions/handlers.InvalidUserIDResponse"
+            }
+          },
+          "404": {
+            "description": "Workspace not found",
+            "schema": {
+              "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          },
+          "409": {
+            "description": "Workspace database removed (database_unavailable), or workspace deprovisioned ({error: workspace_not_provisioned, status: deprovisioned}) - reprovision or update the external connection",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantUnavailableResponse"
+            }
+          },
+          "424": {
+            "description": "The workspace's external database failed the request (external_database_error) - only its owner can fix it: check that it is running and that the connection on the Database page is correct",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantQueryErrorResponse"
+            }
+          },
+          "500": {
+            "description": "Internal error (cypher_error or internal)",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantQueryErrorResponse"
+            }
+          },
+          "503": {
+            "description": "user_partition_not_ready (retry after Retry-After seconds) or db_unreachable; also returned as {error: workspace_not_provisioned, status, statusMessage} while the workspace is pending/provisioning/error",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantUnavailableResponse"
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Delete one user's memory",
+        "tags": [
+          "Users"
+        ]
+      }
+    },
     "/v1/messages/search": {
       "post": {
         "consumes": [
           "application/json"
         ],
-        "description": "Search messages by content across every conversation in the workspace, optionally narrowed to one conversation (conversationId) or to the conversations created with one userId; set together, a message must match both. Uses vector similarity search when embeddings are available, falling back to text CONTAINS when they are not or when the vector search finds nothing in scope. A filtered vector search scores every embedded message in its scope, so a match is never lost to nearer messages outside it. score is present on vector results only. Returns searchType field indicating which method was used. Each message carries its metadata and conversationId. Unknown body fields are rejected, so a misspelled filter cannot silently widen the search.",
+        "description": "Search messages by content across every conversation in the workspace, optionally narrowed to one conversation (conversationId) or to the conversations created with one userId, both by exact match; set together, a message must match both. Uses vector similarity search when embeddings are available, falling back to a case-insensitive text match on content when they are not or when the vector search finds nothing in scope. A filtered vector search scores every embedded message in its scope, so a match is never lost to nearer messages outside it. score is present on vector results only. Returns searchType field indicating which method was used. Each message carries its metadata and conversationId. userId scopes data for a trusted backend and is not an access-control boundary. Unknown body fields are rejected, so a misspelled filter cannot silently widen the search.",
         "parameters": [
           {
             "description": "Search query, optional filters and limit",
@@ -5585,10 +6243,28 @@
               "$ref": "#/definitions/handlers.ErrorResponse"
             }
           },
+          "409": {
+            "description": "Workspace database removed (database_unavailable), or workspace deprovisioned ({error: workspace_not_provisioned, status: deprovisioned}) - reprovision or update the external connection",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantUnavailableResponse"
+            }
+          },
+          "424": {
+            "description": "The workspace's external database failed the request - only its owner can fix it: check that it is running and that the connection on the Database page is correct",
+            "schema": {
+              "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          },
           "500": {
             "description": "Internal error",
             "schema": {
               "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          },
+          "503": {
+            "description": "Workspace database unreachable (db_unreachable); also returned as {error: workspace_not_provisioned, status, statusMessage} while the workspace is pending/provisioning/error",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantUnavailableResponse"
             }
           }
         },
@@ -6446,20 +7122,20 @@
               "$ref": "#/definitions/handlers.TenantUnavailableResponse"
             }
           },
+          "424": {
+            "description": "The workspace's external database failed the request (external_database_error)",
+            "schema": {
+              "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          },
           "500": {
             "description": "Internal error",
             "schema": {
               "$ref": "#/definitions/handlers.ErrorResponse"
             }
           },
-          "502": {
-            "description": "Query backend unavailable",
-            "schema": {
-              "$ref": "#/definitions/handlers.ErrorResponse"
-            }
-          },
           "503": {
-            "description": "Workspace still provisioning (workspace_not_provisioned)",
+            "description": "Workspace still provisioning (workspace_not_provisioned); or the workspace database is unreachable (db_unreachable); also returned as {error: workspace_not_provisioned, status, statusMessage} while the workspace is pending/provisioning/error",
             "schema": {
               "$ref": "#/definitions/handlers.TenantUnavailableResponse"
             }
@@ -6504,10 +7180,28 @@
               "$ref": "#/definitions/handlers.ErrorResponse"
             }
           },
+          "409": {
+            "description": "Workspace database removed (database_unavailable), or workspace deprovisioned ({error: workspace_not_provisioned, status: deprovisioned}) - reprovision or update the external connection",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantUnavailableResponse"
+            }
+          },
+          "424": {
+            "description": "The workspace's external database failed the request - only its owner can fix it: check that it is running and that the connection on the Database page is correct",
+            "schema": {
+              "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          },
           "500": {
             "description": "Internal error",
             "schema": {
               "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          },
+          "503": {
+            "description": "Workspace database unreachable (db_unreachable); also returned as {error: workspace_not_provisioned, status, statusMessage} while the workspace is pending/provisioning/error",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantUnavailableResponse"
             }
           }
         },
@@ -6544,10 +7238,28 @@
               "$ref": "#/definitions/handlers.EntityReasoningProvenanceResponse"
             }
           },
+          "409": {
+            "description": "Workspace database removed (database_unavailable), or workspace deprovisioned ({error: workspace_not_provisioned, status: deprovisioned}) - reprovision or update the external connection",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantUnavailableResponse"
+            }
+          },
+          "424": {
+            "description": "The workspace's external database failed the request - only its owner can fix it: check that it is running and that the connection on the Database page is correct",
+            "schema": {
+              "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          },
           "500": {
             "description": "Internal error",
             "schema": {
               "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          },
+          "503": {
+            "description": "Workspace database unreachable (db_unreachable); also returned as {error: workspace_not_provisioned, status, statusMessage} while the workspace is pending/provisioning/error",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantUnavailableResponse"
             }
           }
         },
@@ -6590,10 +7302,28 @@
               "$ref": "#/definitions/handlers.ErrorResponse"
             }
           },
+          "409": {
+            "description": "Workspace database removed (database_unavailable), or workspace deprovisioned ({error: workspace_not_provisioned, status: deprovisioned}) - reprovision or update the external connection",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantUnavailableResponse"
+            }
+          },
+          "424": {
+            "description": "The workspace's external database failed the request - only its owner can fix it: check that it is running and that the connection on the Database page is correct",
+            "schema": {
+              "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          },
           "500": {
             "description": "Internal error",
             "schema": {
               "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          },
+          "503": {
+            "description": "Workspace database unreachable (db_unreachable); also returned as {error: workspace_not_provisioned, status, statusMessage} while the workspace is pending/provisioning/error",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantUnavailableResponse"
             }
           }
         },
@@ -6639,10 +7369,34 @@
               "$ref": "#/definitions/handlers.ErrorResponse"
             }
           },
+          "404": {
+            "description": "Conversation not found",
+            "schema": {
+              "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          },
+          "409": {
+            "description": "Workspace database removed (database_unavailable), or workspace deprovisioned ({error: workspace_not_provisioned, status: deprovisioned}) - reprovision or update the external connection",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantUnavailableResponse"
+            }
+          },
+          "424": {
+            "description": "The workspace's external database failed the request - only its owner can fix it: check that it is running and that the connection on the Database page is correct",
+            "schema": {
+              "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          },
           "500": {
             "description": "Internal error",
             "schema": {
               "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          },
+          "503": {
+            "description": "Workspace database unreachable (db_unreachable); also returned as {error: workspace_not_provisioned, status, statusMessage} while the workspace is pending/provisioning/error",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantUnavailableResponse"
             }
           }
         },
@@ -6690,10 +7444,28 @@
               "$ref": "#/definitions/handlers.ErrorResponse"
             }
           },
+          "409": {
+            "description": "Workspace database removed (database_unavailable), or workspace deprovisioned ({error: workspace_not_provisioned, status: deprovisioned}) - reprovision or update the external connection",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantUnavailableResponse"
+            }
+          },
+          "424": {
+            "description": "The workspace's external database failed the request - only its owner can fix it: check that it is running and that the connection on the Database page is correct",
+            "schema": {
+              "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          },
           "500": {
             "description": "Internal error",
             "schema": {
               "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          },
+          "503": {
+            "description": "Workspace database unreachable (db_unreachable); also returned as {error: workspace_not_provisioned, status, statusMessage} while the workspace is pending/provisioning/error",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantUnavailableResponse"
             }
           }
         },
@@ -6730,10 +7502,28 @@
               "$ref": "#/definitions/handlers.ConversationReasoningResponse"
             }
           },
+          "409": {
+            "description": "Workspace database removed (database_unavailable), or workspace deprovisioned ({error: workspace_not_provisioned, status: deprovisioned}) - reprovision or update the external connection",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantUnavailableResponse"
+            }
+          },
+          "424": {
+            "description": "The workspace's external database failed the request - only its owner can fix it: check that it is running and that the connection on the Database page is correct",
+            "schema": {
+              "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          },
           "500": {
             "description": "Internal error",
             "schema": {
               "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          },
+          "503": {
+            "description": "Workspace database unreachable (db_unreachable); also returned as {error: workspace_not_provisioned, status, statusMessage} while the workspace is pending/provisioning/error",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantUnavailableResponse"
             }
           }
         },
@@ -6753,7 +7543,7 @@
         "consumes": [
           "application/json"
         ],
-        "description": "Create a typed, directed relationship between two entities. The type is validated against the workspace's relation allowlist, which includes every relationship type the active ontology declares: unknown types are written as the fallback type (RELATED_TO) with the original name preserved in the predicate field — never silently. When the ontology declares the type, its declared source/target entity types are enforced: an endpoint pair the ontology does not cover returns 422 ontology_violation under a strict ontology (the body lists the pairs it does declare) and collapses to the fallback type otherwise; when the endpoints fit, the edge is stored under the ontology's own spelling (depends_on is stored as DEPENDS_ON). Types the ontology does not declare are judged by the workspace's stored allowed_types alone and never rejected on this ground. The extraction pipeline is stricter by design: there a relation that fits no declaration is dropped, while an API call is told its write did not land. confidence defaults to 1.0. properties values must be scalars or arrays of scalars, and the server-owned keys (id, confidence, method, predicate, firstSeenAt, lastSeenAt) are rejected. The write is idempotent per (source, type, target): re-asserting an existing relationship updates lastSeenAt, averages confidence, and re-applies properties. Every relationship carries a UUID id, which a re-assert returns unchanged and GET /v1/entities/{id} reports for the relationship from both ends. Requires the entities:write scope.",
+        "description": "Create a typed, directed relationship between two entities. The type is validated against the workspace's relation allowlist, which includes every relationship type the active ontology declares: unknown types are written as the fallback type (RELATED_TO) with the original name preserved in the predicate field — never silently. When the ontology declares the type, its declared source/target entity types are enforced: an endpoint pair the ontology does not cover returns 422 ontology_violation under a strict ontology (the body lists the pairs it does declare) and collapses to the fallback type otherwise; when the endpoints fit, the edge is stored under the ontology's own spelling (depends_on is stored as DEPENDS_ON). Types the ontology does not declare are judged by the workspace's stored allowed_types alone and never rejected on this ground. The extraction pipeline is stricter by design: there a relation that fits no declaration is dropped, while an API call is told its write did not land. confidence defaults to 1.0. properties values must be scalars or arrays of scalars, and the server-owned keys (id, confidence, method, predicate, firstSeenAt, lastSeenAt) are rejected. The write is idempotent per (source, type, target): re-asserting an existing relationship updates lastSeenAt, averages confidence, and re-applies properties. Both entities must belong to the same user's memory (or both be shared), and to userId's when it is given; otherwise 422 cross_user_relationship. userId scopes data for a trusted backend and is not an access-control boundary. Every relationship carries a UUID id, which a re-assert returns unchanged and GET /v1/entities/{id} reports for the relationship from both ends. Requires the entities:write scope.",
         "parameters": [
           {
             "description": "Source and target entity IDs, relationship type, optional confidence (0..1] and edge properties",
@@ -6794,21 +7584,33 @@
             }
           },
           "409": {
-            "description": "Cardinality violation: the type is declared to-one and the source already has a different target",
+            "description": "Cardinality violation: the type is declared to-one and the source already has a different target; or the workspace database was removed (database_unavailable) or deprovisioned - reprovision or update the external connection",
             "schema": {
               "$ref": "#/definitions/handlers.ErrorResponse"
             }
           },
           "422": {
-            "description": "Ontology violation: the active ontology is strict and declares no relationship of this type between these endpoint types",
+            "description": "ontology_violation: the active ontology is strict and declares no relationship of this type between these endpoint types; or cross_user_relationship: the entities belong to different users, or not to userId",
             "schema": {
               "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          },
+          "424": {
+            "description": "The workspace's external database failed the request (external_database_error) - only its owner can fix it: check that it is running and that the connection on the Database page is correct",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantQueryErrorResponse"
             }
           },
           "500": {
             "description": "Tenant database failure",
             "schema": {
               "$ref": "#/definitions/handlers.TenantQueryErrorResponse"
+            }
+          },
+          "503": {
+            "description": "user_partition_not_ready: userId was given before this workspace's existing memory was assigned to users; retry after Retry-After seconds; or the workspace database is unreachable (db_unreachable); also returned as {error: workspace_not_provisioned, status, statusMessage} while the workspace is pending/provisioning/error",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantUnavailableResponse"
             }
           }
         },
@@ -6828,7 +7630,7 @@
         "consumes": [
           "application/json"
         ],
-        "description": "Create multiple typed relationships in one request (the bulk form of POST /v1/relationships), max 100. Each edge is upserted through the same shared core as the single endpoint, so type validation, predicate fallback, and to-one cardinality behave identically. A bad edge (missing fields, cardinality violation, unknown entity) is reported in its result entry and never aborts the batch; the response always returns 200 with a per-edge results array. A successful entry carries the relationship's id, the same one POST /v1/relationships would return.",
+        "description": "Create multiple typed relationships in one request (the bulk form of POST /v1/relationships), max 100. Each edge is upserted through the same shared core as the single endpoint, so type validation, predicate fallback, to-one cardinality and the same-user rule behave identically; each edge carries its own optional userId. A bad edge (missing fields, cardinality violation, unknown entity, entities of different users) is reported in its result entry and never aborts the batch; an accepted request always returns 200 with a per-edge results array. A successful entry carries the relationship's id, the same one POST /v1/relationships would return.",
         "parameters": [
           {
             "description": "Array of relationships",
@@ -6856,10 +7658,28 @@
               "$ref": "#/definitions/handlers.ErrorResponse"
             }
           },
+          "409": {
+            "description": "Workspace database removed (database_unavailable), or workspace deprovisioned ({error: workspace_not_provisioned, status: deprovisioned}) - reprovision or update the external connection",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantUnavailableResponse"
+            }
+          },
+          "424": {
+            "description": "The workspace's external database failed the request (external_database_error) - only its owner can fix it: check that it is running and that the connection on the Database page is correct",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantQueryErrorResponse"
+            }
+          },
           "500": {
             "description": "Tenant database failure",
             "schema": {
               "$ref": "#/definitions/handlers.TenantQueryErrorResponse"
+            }
+          },
+          "503": {
+            "description": "user_partition_not_ready: an edge names a userId before this workspace's existing memory was assigned to users; retry after Retry-After seconds; nothing is written; or the workspace database is unreachable (db_unreachable); also returned as {error: workspace_not_provisioned, status, statusMessage} while the workspace is pending/provisioning/error",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantUnavailableResponse"
             }
           }
         },
@@ -6918,6 +7738,24 @@
             "schema": {
               "$ref": "#/definitions/handlers.InvalidLimitResponse"
             }
+          },
+          "409": {
+            "description": "Workspace database removed (database_unavailable), or workspace deprovisioned ({error: workspace_not_provisioned, status: deprovisioned}) - reprovision or update the external connection",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantUnavailableResponse"
+            }
+          },
+          "424": {
+            "description": "The workspace's external database failed the request - only its owner can fix it: check that it is running and that the connection on the Database page is correct",
+            "schema": {
+              "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          },
+          "503": {
+            "description": "Workspace database unreachable (db_unreachable); also returned as {error: workspace_not_provisioned, status, statusMessage} while the workspace is pending/provisioning/error",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantUnavailableResponse"
+            }
           }
         },
         "security": [
@@ -6952,6 +7790,24 @@
               "additionalProperties": true,
               "type": "object"
             }
+          },
+          "409": {
+            "description": "Workspace database removed (database_unavailable), or workspace deprovisioned ({error: workspace_not_provisioned, status: deprovisioned}) - reprovision or update the external connection",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantUnavailableResponse"
+            }
+          },
+          "424": {
+            "description": "The workspace's external database failed the request - only its owner can fix it: check that it is running and that the connection on the Database page is correct",
+            "schema": {
+              "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          },
+          "503": {
+            "description": "Workspace database unreachable (db_unreachable); also returned as {error: workspace_not_provisioned, status, statusMessage} while the workspace is pending/provisioning/error",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantUnavailableResponse"
+            }
           }
         },
         "security": [
@@ -6970,6 +7826,7 @@
         "consumes": [
           "application/json"
         ],
+        "description": "Pairs whose entities belong to different users (or a user's and a shared one) are never merged: they are skipped and counted in excludedCrossUser, in the dry-run preview and in the result. While the workspace's existing memory is still being assigned to users, the call (dry run included) answers 503 user_partition_not_ready with Retry-After.",
         "parameters": [
           {
             "description": "Bulk decision payload",
@@ -6990,6 +7847,24 @@
             "schema": {
               "additionalProperties": true,
               "type": "object"
+            }
+          },
+          "409": {
+            "description": "Workspace database removed (database_unavailable), or workspace deprovisioned ({error: workspace_not_provisioned, status: deprovisioned}) - reprovision or update the external connection",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantUnavailableResponse"
+            }
+          },
+          "424": {
+            "description": "The workspace's external database failed the request (external_database_error) - only its owner can fix it: check that it is running and that the connection on the Database page is correct",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantQueryErrorResponse"
+            }
+          },
+          "503": {
+            "description": "user_partition_not_ready: the workspace's existing memory is still being assigned to users; retry after Retry-After seconds; or the workspace database is unreachable (db_unreachable); also returned as {error: workspace_not_provisioned, status, statusMessage} while the workspace is pending/provisioning/error",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantUnavailableResponse"
             }
           }
         },
@@ -7024,6 +7899,24 @@
               "additionalProperties": true,
               "type": "object"
             }
+          },
+          "409": {
+            "description": "Workspace database removed (database_unavailable), or workspace deprovisioned ({error: workspace_not_provisioned, status: deprovisioned}) - reprovision or update the external connection",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantUnavailableResponse"
+            }
+          },
+          "424": {
+            "description": "The workspace's external database failed the request (external_database_error) - only its owner can fix it: check that it is running and that the connection on the Database page is correct",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantQueryErrorResponse"
+            }
+          },
+          "503": {
+            "description": "Workspace database unreachable (db_unreachable); also returned as {error: workspace_not_provisioned, status, statusMessage} while the workspace is pending/provisioning/error",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantUnavailableResponse"
+            }
           }
         },
         "security": [
@@ -7042,6 +7935,7 @@
         "consumes": [
           "application/json"
         ],
+        "description": "The survivor and every merged entity must belong to the same user's memory (or all be shared); otherwise nothing is merged and the call answers 422 cross_user_merge. While the workspace's existing memory is still being assigned to users, it answers 503 user_partition_not_ready with Retry-After.",
         "parameters": [
           {
             "description": "Survivor + members to merge",
@@ -7062,6 +7956,30 @@
             "schema": {
               "additionalProperties": true,
               "type": "object"
+            }
+          },
+          "409": {
+            "description": "Workspace database removed (database_unavailable), or workspace deprovisioned ({error: workspace_not_provisioned, status: deprovisioned}) - reprovision or update the external connection",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantUnavailableResponse"
+            }
+          },
+          "422": {
+            "description": "cross_user_merge: the entities belong to different users (or one is shared)",
+            "schema": {
+              "$ref": "#/definitions/handlers.CrossUserErrorResponse"
+            }
+          },
+          "424": {
+            "description": "The workspace's external database failed the request (external_database_error) - only its owner can fix it: check that it is running and that the connection on the Database page is correct",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantQueryErrorResponse"
+            }
+          },
+          "503": {
+            "description": "user_partition_not_ready: the workspace's existing memory is still being assigned to users; retry after Retry-After seconds; or the workspace database is unreachable (db_unreachable); also returned as {error: workspace_not_provisioned, status, statusMessage} while the workspace is pending/provisioning/error",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantUnavailableResponse"
             }
           }
         },
@@ -7099,6 +8017,12 @@
             "description": "Workspace database removed (database_unavailable), or workspace deprovisioned ({error: workspace_not_provisioned, status: deprovisioned}) - reprovision or update the external connection",
             "schema": {
               "$ref": "#/definitions/handlers.TenantUnavailableResponse"
+            }
+          },
+          "424": {
+            "description": "The workspace's external database failed the request (external_database_error) - only its owner can fix it: check that it is running and that the connection on the Database page is correct",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantQueryErrorResponse"
             }
           },
           "500": {
@@ -7150,6 +8074,12 @@
               "$ref": "#/definitions/handlers.TenantQueryErrorResponse"
             }
           },
+          "424": {
+            "description": "The workspace's external database failed the request (external_database_error) - only its owner can fix it: check that it is running and that the connection on the Database page is correct",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantQueryErrorResponse"
+            }
+          },
           "500": {
             "description": "Internal error (cypher_error or internal)",
             "schema": {
@@ -7179,6 +8109,7 @@
         "consumes": [
           "application/json"
         ],
+        "description": "A confirm, or a redirect onto mergeInto, never merges two users' entities (or a user's and a shared one): it is refused with 422 cross_user_merge. Such a pair can only predate the per-user partition migration, and can still be rejected. While that migration is still running, a confirm or redirect answers 503 user_partition_not_ready with Retry-After.",
         "parameters": [
           {
             "description": "Pair ID (hash of sourceId→targetId)",
@@ -7206,6 +8137,30 @@
             "schema": {
               "additionalProperties": true,
               "type": "object"
+            }
+          },
+          "409": {
+            "description": "Workspace database removed (database_unavailable), or workspace deprovisioned ({error: workspace_not_provisioned, status: deprovisioned}) - reprovision or update the external connection",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantUnavailableResponse"
+            }
+          },
+          "422": {
+            "description": "cross_user_merge: the entities belong to different users (or one is shared)",
+            "schema": {
+              "$ref": "#/definitions/handlers.CrossUserErrorResponse"
+            }
+          },
+          "424": {
+            "description": "The workspace's external database failed the request (external_database_error) - only its owner can fix it: check that it is running and that the connection on the Database page is correct",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantQueryErrorResponse"
+            }
+          },
+          "503": {
+            "description": "user_partition_not_ready: the workspace's existing memory is still being assigned to users; retry after Retry-After seconds; or the workspace database is unreachable (db_unreachable); also returned as {error: workspace_not_provisioned, status, statusMessage} while the workspace is pending/provisioning/error",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantUnavailableResponse"
             }
           }
         },
@@ -7261,9 +8216,21 @@
             }
           },
           "409": {
-            "description": "Source entity has since been merged elsewhere",
+            "description": "Source entity has since been merged elsewhere; or the workspace database was removed (database_unavailable) or deprovisioned - reprovision or update the external connection",
             "schema": {
               "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          },
+          "424": {
+            "description": "The workspace's external database failed the request - only its owner can fix it: check that it is running and that the connection on the Database page is correct",
+            "schema": {
+              "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          },
+          "503": {
+            "description": "Workspace database unreachable (db_unreachable); also returned as {error: workspace_not_provisioned, status, statusMessage} while the workspace is pending/provisioning/error",
+            "schema": {
+              "$ref": "#/definitions/handlers.TenantUnavailableResponse"
             }
           }
         },
@@ -8445,8 +9412,14 @@
               "$ref": "#/definitions/handlers.WorkspaceBootstrapRequiredResponse"
             }
           },
+          "424": {
+            "description": "external database connection failed",
+            "schema": {
+              "$ref": "#/definitions/handlers.ErrorResponse"
+            }
+          },
           "502": {
-            "description": "external database connection or schema init failed",
+            "description": "external database schema init failed",
             "schema": {
               "$ref": "#/definitions/handlers.ErrorResponse"
             }
@@ -9258,6 +10231,10 @@
     {
       "description": "Reasoning memory: record and retrieve agent steps, tool calls, and decision traces.",
       "name": "Reasoning"
+    },
+    {
+      "description": "Per-user memory: act on everything stored for one end user of your application, identified by the userId on their conversations and entities. userId scopes data for a trusted backend and is not an access-control boundary.",
+      "name": "Users"
     },
     {
       "description": "Execute read-only Cypher queries directly against the tenant graph.",

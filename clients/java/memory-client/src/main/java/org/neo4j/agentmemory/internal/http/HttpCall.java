@@ -23,7 +23,7 @@ record HttpCall(String method, String uriTemplate, Map<String, Object> uriVariab
         headers = Map.copyOf(headers);
     }
 
-    public URI uri() {
+    URI uri() {
         var matcher = VARIABLE.matcher(uriTemplate);
         var expanded = matcher.replaceAll(match -> {
             var name = match.group(1);

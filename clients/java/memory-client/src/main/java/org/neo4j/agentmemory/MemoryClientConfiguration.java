@@ -2,11 +2,11 @@ package org.neo4j.agentmemory;
 
 import java.net.URI;
 import java.net.http.HttpClient;
+import java.util.Objects;
+import java.util.concurrent.Executor;
 import org.neo4j.agentmemory.internal.http.HttpTransport;
 import org.neo4j.agentmemory.internal.http.JdkHttpTransport;
 import org.neo4j.agentmemory.internal.http.LangChain4jHttpTransport;
-import java.util.Objects;
-import java.util.concurrent.Executor;
 import org.neo4j.agentmemory.internal.http.RestClientHttpTransport;
 import org.springframework.web.client.RestClient;
 
@@ -93,15 +93,14 @@ public final class MemoryClientConfiguration {
          * @throws NullPointerException if httpClient is null
          */
         public Builder jdkHttpClient(HttpClient httpClient) {
-            this.httpTransport = new JdkHttpTransport(Objects.requireNonNull(httpClient, "httpClient"));
+            this.httpTransport = new JdkHttpTransport(httpClient);
             return this;
         }
 
         /**
          * Uses an application-built Spring client. Its interceptors, observation
          * registry, request-factory timeouts, and TLS settings apply. Its base URL
-         * and status handlers do not apply to memory requests. Explicit memory
-         * headers override corresponding defaults; unrelated default headers remain.
+         * default headers, and status handlers do not apply to memory requests.
          * Blocking exchanges run on executor; neither the client nor the executor
          * is closed. Requires Spring Framework 7.0 or later.
          * Replaces any HTTP client set earlier.
@@ -112,9 +111,7 @@ public final class MemoryClientConfiguration {
          * @throws NullPointerException if restClient or executor is null
          */
         public Builder restClient(RestClient restClient, Executor executor) {
-            this.httpTransport = new RestClientHttpTransport(
-                    Objects.requireNonNull(restClient, "restClient"),
-                    Objects.requireNonNull(executor, "executor"));
+            this.httpTransport = new RestClientHttpTransport(restClient, executor);
             return this;
         }
 
@@ -130,9 +127,7 @@ public final class MemoryClientConfiguration {
          * @throws NullPointerException if httpClient or executor is null
          */
         public Builder langChain4jHttpClient(dev.langchain4j.http.client.HttpClient httpClient, Executor executor) {
-            this.httpTransport = new LangChain4jHttpTransport(
-                    Objects.requireNonNull(httpClient, "httpClient"),
-                    Objects.requireNonNull(executor, "executor"));
+            this.httpTransport = new LangChain4jHttpTransport(httpClient, executor);
             return this;
         }
 
