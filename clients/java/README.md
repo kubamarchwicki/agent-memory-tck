@@ -4,10 +4,53 @@ This Java 17 client accesses the hosted Neo4j Agent Memory Service. The core art
 
 ## Public API
 
-MemoryClient.create(String apiKey) uses MEMORY_ENDPOINT if set, otherwise
-https://memory.neo4jlabs.com/v1. MemoryClient.create(URI endpoint, String apiKey)
-selects an explicit endpoint. Both factories construct the default JDK HTTP
-adapter without checking remote reachability or authentication.
+`MemoryClient.create()` uses `MemoryClientConfiguration.builder().build()`.
+The builder resolves environment settings and validates them when `build()` is
+called. `NAMS_API_KEY` must contain a nonblank Workspace API key. `NAMS_BASE_URL`
+is optional: an absent or blank value uses `https://memory.neo4jlabs.com/v1`.
+
+The only other factory is `MemoryClient.create(MemoryClientConfiguration)`.
+Use the fluent builder to override either setting; omitted settings still come
+from the environment:
+
+```java
+import org.neo4j.agentmemory.MemoryClient;
+import org.neo4j.agentmemory.MemoryClientConfiguration;
+
+var configuration = MemoryClientConfiguration.builder()
+        .apiKey("<workspace-api-key>")
+        .baseUrl("https://memory.neo4jlabs.com/v1")
+        .build();
+var client = MemoryClient.create(configuration);
+```
+
+`apiKey(String)` and `baseUrl(String)` override their environment variables.
+Explicit null or blank values fail validation rather than falling back to the
+environment. Base URLs are trimmed and must be absolute HTTP(S) URLs with a host,
+without user info, a query, or a fragment. Include the service's version path;
+a trailing slash is supported. Invalid settings throw `IllegalArgumentException`
+from `build()`. The built configuration is immutable and exposes `URI baseUrl()`
+and `String apiKey()`. Reusing a builder does not change earlier configurations.
+
+Both factories construct the default JDK HTTP adapter without checking remote
+reachability or authentication. Initialization logs the configured base URL at
+INFO through `System.Logger`.
+
+Replace calls to the former key-only and endpoint/key factories with a built
+configuration when adopting this version.
+
+The client expects a **Workspace API key** bound to the target workspace. It does
+not yet support an Admin key combined with an explicitly provided workspace ID.
+
+Set `NAMS_API_KEY` before running the examples; optionally set `NAMS_BASE_URL`
+(including the version path) to override the service URL:
+
+```bash
+export NAMS_API_KEY='<workspace-api-key>'
+export NAMS_BASE_URL=https://memory.neo4jlabs.com/v1
+```
+
+Then construct the client with `MemoryClient.create()`.
 
 MemoryClient defines all supported domain operations, including those addressed
 by Conversation and Reasoning Step UUIDs. Applications can use these operations
@@ -22,7 +65,7 @@ that extraction or enrichment is ready.
 
 | Package | Contents |
 | --- | --- |
-| org.neo4j.agentmemory | MemoryClient and its default factories and await helpers |
+| org.neo4j.agentmemory | MemoryClient, MemoryClientConfiguration, default factories, and await helpers |
 | org.neo4j.agentmemory.conversation | Conversation, requests, Messages, and Conversation Context |
 | org.neo4j.agentmemory.reasoning | Reasoning Steps, traces, explanations, and Tool Calls |
 | org.neo4j.agentmemory.entity | Entity values and search inputs |
@@ -51,7 +94,7 @@ import org.neo4j.agentmemory.MemoryClient;
 import org.neo4j.agentmemory.conversation.NewMessage;
 
 // Inside a method that declares throws Exception:
-var client = MemoryClient.create(System.getenv("MEMORY_API_KEY"));
+var client = MemoryClient.create();
 var conversation = client.createConversation(new CreateConversation(
         null, Map.of("title", "Find hotels in Zermatt"))).get(20, TimeUnit.SECONDS);
 conversation.addMessage(NewMessage.user("Find hotels in Zermatt")).get(20, TimeUnit.SECONDS);
@@ -73,7 +116,7 @@ The first use of the built-in fallback emits one event shared by all callers: IN
 
 Timeout and interruption throw `MemoryClientException`, retaining `TimeoutException` or `InterruptedException` as the cause. Interruption restores the thread's interrupt flag. The timeout measures this wait, not the operation's total lifetime. Both outcomes leave the supplied future running, so a timed-out write can still complete.
 
-For example, pass an existing conversation UUID as the first command-line argument and provide `MEMORY_API_KEY` in the environment. This example prints its recent messages in the service's newest-first order:
+For example, pass an existing conversation UUID as the first command-line argument and provide `NAMS_API_KEY` in the environment. This example prints its recent messages in the service's newest-first order:
 
 ```java
 import static org.neo4j.agentmemory.MemoryClient.await;
@@ -84,7 +127,7 @@ import org.neo4j.agentmemory.MemoryClient;
 
 public final class ReadConversationMessages {
     public static void main(String[] args) {
-        var client = MemoryClient.create(System.getenv("MEMORY_API_KEY"));
+        var client = MemoryClient.create();
         var conversationId = UUID.fromString(args[0]);
 
         // Uses NAMS_AWAIT_TIMEOUT_SECONDS, falling back to 30 seconds.
@@ -141,7 +184,7 @@ The package entry admits initialization and fallback INFO events even with a WAR
 | WARNING | Once-only invalid default-await setting fallback |
 | ERROR | None currently; applications own reporting of returned exceptions |
 
-`event=client.initialized transport=jdk-http` means local construction succeeded. It does not establish service reachability or authentication. Operation timing starts at shared request-helper entry, includes POST encoding, and ends after HTTP status validation, decoding, and domain conversion (status validation alone for DELETE). Success does not establish extraction or enrichment readiness. Synchronous validation before helper entry emits no operation event.
+`event=client.initialized transport=jdk-http baseUrl=https://memory.neo4jlabs.com/v1` means local construction succeeded and identifies the configured service URL. It does not establish service reachability or authentication. Operation timing starts at shared request-helper entry, includes POST encoding, and ends after HTTP status validation, decoding, and domain conversion (status validation alone for DELETE). Success does not establish extraction or enrichment readiness. Synchronous validation before helper entry emits no operation event.
 
 For example, at DEBUG the client can emit these diagnostic summaries (values are illustrative):
 
@@ -154,7 +197,7 @@ event=operation.completed operation=getConversation callId=8 outcome=failure dur
 
 `callId` is a local counter shared across client instances in the loaded client classes; it is not a durable or distributed identifier. Terminal events carry elapsed `durationMs`, outcome, observed HTTP `status` when available, and optional result counts. Lists use `resultCount`; context uses `reflectionCount`, `observationCount`, and `messageCount`; traces use `stepCount` and `toolCallCount`; explanations use `toolCallCount` and `entityCount`. Failures and cancellations carry a phase (`encode`, `request`, `transport`, `http`, or `decode`) and the unwrapped exception's simple class name in `errorType`.
 
-An optional `requestId` comes from the first available `x-request-id`, `request-id`, or `x-amzn-requestid` response header, in that order, and is emitted only when it matches `[A-Za-z0-9._:-]{1,128}`. The client excludes credentials, raw URLs, resource IDs, message and reasoning content, tool payloads, response excerpts, and exception messages or stack traces. Field text is a diagnostic convention, not a public event API.
+An optional `requestId` comes from the first available `x-request-id`, `request-id`, or `x-amzn-requestid` response header, in that order, and is emitted only when it matches `[A-Za-z0-9._:-]{1,128}`. Initialization includes the configured base URL. Operation events exclude URLs; all events exclude credentials, resource IDs, message and reasoning content, tool payloads, response excerpts, and exception messages or stack traces. Field text is a diagnostic convention, not a public event API.
 
 Cancellation describes the returned future's outcome, without confirming transport cancellation. An await timeout or interruption leaves the supplied future running and emits no extra operation failure; `await` also avoids reporting propagated failures again. Operations retain the original returned future and exception behavior. Ordinary logger runtime failures are isolated from operation results, while fatal errors are not swallowed. A caller can observe future completion before its terminal logging callback finishes: `join()` does not flush logging. Threshold changes can suppress one event of a pair, and configuring a backend does not guarantee delivery.
 
@@ -194,4 +237,4 @@ git checkout --detach <delivery-commit-id>
 mvn -f clients/java/pom.xml -pl memory-client -am clean install
 ```
 
-Downstream CI should run that build in its own Maven repository before resolving `org.neo4j:agent-memory-client:0.1.0-SNAPSHOT`. Delivery evidence must include the source commit ID, SHA-256 hashes of the built JAR and installed POM, Java and Maven versions, and hosted test counts. The credential-gated persistence check is `mvn -f clients/java/pom.xml -pl memory-client -Dit.test=ConversationMetadataIT verify`; a skip without `MEMORY_API_KEY` is not hosted persistence evidence. Use `MEMORY_ENDPOINT` to select an isolated hosted test workspace. The check deletes only the UUID it creates.
+Downstream CI should run that build in its own Maven repository before resolving `org.neo4j:agent-memory-client:0.1.0-SNAPSHOT`. Delivery evidence must include the source commit ID, SHA-256 hashes of the built JAR and installed POM, Java and Maven versions, and hosted test counts. The credential-gated persistence check is `mvn -f clients/java/pom.xml -pl memory-client -Dit.test=ConversationMetadataIT verify`; a skip without `NAMS_API_KEY` is not hosted persistence evidence. Use a Workspace API key for an isolated hosted test workspace and `NAMS_BASE_URL` to select its service URL. The check deletes only the UUID it creates.

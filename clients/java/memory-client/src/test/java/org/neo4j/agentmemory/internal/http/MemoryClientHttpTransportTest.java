@@ -1,6 +1,7 @@
 package org.neo4j.agentmemory.internal.http;
 
 import org.neo4j.agentmemory.MemoryClient;
+import org.neo4j.agentmemory.MemoryClientConfiguration;
 import org.neo4j.agentmemory.conversation.CreateConversation;
 import org.neo4j.agentmemory.reasoning.NewReasoningStep;
 import org.neo4j.agentmemory.reasoning.NewToolCall;
@@ -18,7 +19,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
-import java.net.URI;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
@@ -34,8 +34,8 @@ class MemoryClientHttpTransportTest {
                           "userId": "alice"
                         }
                         """)));
-        var client = MemoryClient.create(
-                URI.create(wireMock.getHttpBaseUrl() + "/v1"), "test-api-key");
+        var client = MemoryClient.create(MemoryClientConfiguration.builder()
+                .baseUrl(wireMock.getHttpBaseUrl() + "/v1").apiKey("test-api-key").build());
 
         client.createConversation(new CreateConversation("alice")).join();
 
@@ -86,8 +86,8 @@ class MemoryClientHttpTransportTest {
                                   "status": "success"
                                 }
                                 """)));
-        var client = MemoryClient.create(
-                URI.create(wireMock.getHttpBaseUrl() + "/v1"), "test-api-key");
+        var client = MemoryClient.create(MemoryClientConfiguration.builder()
+                .baseUrl(wireMock.getHttpBaseUrl() + "/v1").apiKey("test-api-key").build());
 
         var conversation = client.createConversation(new CreateConversation()).join();
         var step = conversation

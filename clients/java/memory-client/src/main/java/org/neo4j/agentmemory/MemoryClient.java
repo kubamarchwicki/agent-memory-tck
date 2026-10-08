@@ -20,7 +20,6 @@ import org.neo4j.agentmemory.reasoning.ReasoningStepExplanation;
 import org.neo4j.agentmemory.reasoning.ReasoningTrace;
 import org.neo4j.agentmemory.reasoning.ToolCall;
 
-import java.net.URI;
 import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
@@ -51,6 +50,9 @@ import java.util.concurrent.CompletableFuture;
  * <p>Writes are not retried automatically. Cancelling a future does not
  * confirm transport cancellation. The {@code await} helpers bound the
  * caller's wait without cancelling or completing the supplied future.
+ *
+ * <p>Authentication requires a Workspace API key bound to the target workspace.
+ * Admin keys with an explicitly supplied workspace ID are not yet supported.
  *
  * <p>The static {@code create} methods select the default JDK HTTP adapter.
  * Another adapter can implement this interface and bind the same live
@@ -96,37 +98,32 @@ public interface MemoryClient {
     }
 
     /**
-     * Constructs the default JDK HTTP client without making a remote request.
-     * Uses the trimmed MEMORY_ENDPOINT value when it is nonblank; otherwise
-     * uses https://memory.neo4jlabs.com/v1.
+     * Constructs the default JDK HTTP client with environment settings.
+     * Equivalent to create(MemoryClientConfiguration.builder().build()).
+     * NAMS_API_KEY is required; NAMS_BASE_URL defaults to
+     * https://memory.neo4jlabs.com/v1 when absent or blank.
+     * Construction logs the base URL and makes no remote request.
      *
-     * @param apiKey the bearer credential for hosted operations
-     * @return a client using the selected endpoint
-     * @throws IllegalArgumentException if apiKey is null or blank, or the
-     *         configured endpoint cannot be parsed as a URI
+     * @return a client using the resolved environment settings
+     * @throws IllegalArgumentException if environment settings are invalid
      * @throws MissingJsonCodecException if Jackson 3 is unavailable
+     * @see MemoryClientConfiguration.Builder#build()
      */
-    static MemoryClient create(String apiKey) {
-        var configuredEndpoint = System.getenv("MEMORY_ENDPOINT");
-        var endpoint = URI.create(configuredEndpoint == null || configuredEndpoint.isBlank()
-                ? "https://memory.neo4jlabs.com/v1"
-                : configuredEndpoint.trim());
-        return create(endpoint, apiKey);
+    static MemoryClient create() {
+        return create(MemoryClientConfiguration.builder().build());
     }
 
     /**
-     * Constructs the default JDK HTTP client for an explicit endpoint.
-     * Construction does not verify reachability or authentication.
+     * Constructs the default JDK HTTP client from validated configuration.
+     * Logs the base URL without checking remote reachability or authentication.
      *
-     * @param endpoint the hosted endpoint, including its version path
-     * @param apiKey the bearer credential for hosted operations
-     * @return a client using the supplied endpoint
-     * @throws IllegalArgumentException if endpoint is null or empty, or
-     *         apiKey is null or blank
+     * @param configuration immutable settings produced by the configuration builder
+     * @return a client using the supplied settings
+     * @throws NullPointerException if configuration is null
      * @throws MissingJsonCodecException if Jackson 3 is unavailable
      */
-    static MemoryClient create(URI endpoint, String apiKey) {
-        return JdkMemoryClient.create(endpoint, apiKey);
+    static MemoryClient create(MemoryClientConfiguration configuration) {
+        return JdkMemoryClient.create(configuration);
     }
 
     /**

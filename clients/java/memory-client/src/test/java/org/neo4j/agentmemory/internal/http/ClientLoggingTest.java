@@ -9,6 +9,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.net.http.HttpHeaders;
+import java.net.URI;
 import java.util.List;
 import java.util.Map;
 import java.util.ResourceBundle;
@@ -51,10 +52,10 @@ class ClientLoggingTest {
     void infoSuppressesOperationSummaries() {
         var sink = new RecordingClientLogger(System.Logger.Level.INFO);
         var logging = new ClientLogging(sink);
-        logging.initialized();
+        logging.initialized(URI.create("https://memory.test/v1"));
         logging.call("messages", operation -> CompletableFuture.completedFuture(List.of()));
         assertThat(sink.entries()).containsExactly(new RecordingClientLogger.Entry(
-                System.Logger.Level.INFO, "event=client.initialized transport=jdk-http"));
+                System.Logger.Level.INFO, "event=client.initialized transport=jdk-http baseUrl=https://memory.test/v1"));
     }
 
     @Test
@@ -210,7 +211,7 @@ class ClientLoggingTest {
             }
         };
         var logging = new ClientLogging(logger);
-        logging.initialized();
+        logging.initialized(URI.create("https://memory.test/v1"));
         var success = new CompletableFuture<String>();
         assertThat(logging.call("messages", operation -> success)).isSameAs(success);
         success.complete("result");

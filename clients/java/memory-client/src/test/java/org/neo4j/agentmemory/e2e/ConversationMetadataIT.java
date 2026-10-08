@@ -3,7 +3,6 @@ package org.neo4j.agentmemory.e2e;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
-import java.net.URI;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -17,18 +16,15 @@ class ConversationMetadataIT {
     @Test
     @Timeout(value = 90, unit = TimeUnit.SECONDS)
     void titleSurvivesFreshClientDetailAndListReads() throws Exception {
-        var key = System.getenv("MEMORY_API_KEY");
-        assumeTrue(key != null && !key.isBlank(), "MEMORY_API_KEY is not set");
-        var configured = System.getenv("MEMORY_ENDPOINT");
-        var endpoint = URI.create(configured == null || configured.isBlank()
-                ? "https://memory.neo4jlabs.com/v1" : configured.trim());
-        var creator = MemoryClient.create(endpoint, key);
+        var key = System.getenv("NAMS_API_KEY");
+        assumeTrue(key != null && !key.isBlank(), "NAMS_API_KEY is not set");
+        var creator = MemoryClient.create();
         var title = "Find hotels in Zermatt";
         var created = creator.createConversation(new CreateConversation(
                 "java-metadata-" + UUID.randomUUID(), Map.of("title", title)))
                 .get(20, TimeUnit.SECONDS);
         try {
-            var reader = MemoryClient.create(endpoint, key);
+            var reader = MemoryClient.create();
             var detail = reader.getConversation(created.id()).get(20, TimeUnit.SECONDS);
             var listed = reader.listConversations(new ListConversations(50))
                     .get(20, TimeUnit.SECONDS).stream()

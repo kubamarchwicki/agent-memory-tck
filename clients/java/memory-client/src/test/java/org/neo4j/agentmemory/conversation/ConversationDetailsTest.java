@@ -1,6 +1,7 @@
 package org.neo4j.agentmemory.conversation;
 
 import org.neo4j.agentmemory.MemoryClient;
+import org.neo4j.agentmemory.MemoryClientConfiguration;
 import org.neo4j.agentmemory.testsupport.OpenApiContract;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
@@ -8,7 +9,6 @@ import static org.assertj.core.api.Assertions.*;
 
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
-import java.net.URI;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
@@ -103,6 +103,7 @@ class ConversationDetailsTest {
     }
 
     private static MemoryClient client(WireMockRuntimeInfo server) {
-        return MemoryClient.create(URI.create(server.getHttpBaseUrl() + "/v1"), "key");
+        return MemoryClient.create(MemoryClientConfiguration.builder()
+                .baseUrl(server.getHttpBaseUrl() + "/v1").apiKey("key").build());
     }
 }

@@ -1,12 +1,12 @@
 package org.neo4j.agentmemory.reasoning;
 
 import org.neo4j.agentmemory.MemoryClient;
+import org.neo4j.agentmemory.MemoryClientConfiguration;
 import org.neo4j.agentmemory.entity.Entity;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -59,7 +59,7 @@ class ReasoningSnapshotsTest {
     }
 
     private static MemoryClient client() {
-        return MemoryClient.create(
-                URI.create("https://memory.test/v1"), "key");
+        return MemoryClient.create(MemoryClientConfiguration.builder()
+                .baseUrl("https://memory.test/v1").apiKey("key").build());
     }
 }

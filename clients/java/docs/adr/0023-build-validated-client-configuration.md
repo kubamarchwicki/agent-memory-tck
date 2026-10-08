@@ -1,0 +1,11 @@
+---
+status: accepted
+---
+
+# Build validated client configuration
+
+MemoryClient exposes only create() and create(MemoryClientConfiguration); applications supply immutable settings built with MemoryClientConfiguration.builder() rather than key-only or URL/key factory arguments. The no-argument factory builds an empty configuration builder, keeping environment resolution and validation in build() so callers can validate settings before selecting the default HTTP adapter. Omitted settings read NAMS_API_KEY and NAMS_BASE_URL at build time; the key is required, and an absent or blank environment URL uses https://memory.neo4jlabs.com/v1. Explicit settings override the environment; explicit null or blank values fail validation rather than silently changing their source.
+
+Base URLs are trimmed, absolute HTTP(S) URLs with a host, and cannot contain user info, query parameters, or fragments. A trailing slash is supported when joining operation paths. The immutable configuration uses a final class with a private constructor instead of a record so validation cannot be bypassed and generated text does not expose the API key. Authentication continues to require a Workspace API key; an Admin key with an explicit workspace ID remains unsupported.
+
+Initialization logs the configured baseUrl at INFO to identify the selected service before any remote request. This deliberately refines ADR 0021's URL exclusion: operation events continue to exclude URLs, and all events continue to exclude credentials and payloads. URL validation rejects credential-bearing user info and query parameters; client construction still verifies neither reachability nor authentication. Logging remains application-owned as established by ADR 0019.

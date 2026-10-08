@@ -5,6 +5,7 @@ import org.neo4j.agentmemory.reasoning.ReasoningStepExplanation;
 import org.neo4j.agentmemory.reasoning.ReasoningTrace;
 
 import java.net.http.HttpHeaders;
+import java.net.URI;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.CancellationException;
@@ -29,8 +30,8 @@ final class ClientLogging {
 
     ClientLogging(System.Logger logger) { this.logger = logger; }
 
-    void initialized() {
-        emit(System.Logger.Level.INFO, () -> "event=client.initialized transport=jdk-http");
+    void initialized(URI baseUrl) {
+        emit(System.Logger.Level.INFO, () -> "event=client.initialized transport=jdk-http baseUrl=" + baseUrl);
     }
 
     <T> CompletableFuture<T> call(String operation, Function<Operation, CompletableFuture<T>> action) {

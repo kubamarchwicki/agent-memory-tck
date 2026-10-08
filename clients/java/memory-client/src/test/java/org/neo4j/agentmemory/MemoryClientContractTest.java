@@ -21,7 +21,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
-import java.net.URI;
 import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
@@ -41,8 +40,8 @@ class MemoryClientContractTest {
 
     @BeforeEach
     void startFromACleanContract() {
-        client = MemoryClient.create(
-                URI.create(WIRE_MOCK.baseUrl() + "/v1"), "nams_contract-test-key");
+        client = MemoryClient.create(MemoryClientConfiguration.builder()
+                .baseUrl(WIRE_MOCK.baseUrl() + "/v1").apiKey("nams_contract-test-key").build());
     }
 
     @AfterEach

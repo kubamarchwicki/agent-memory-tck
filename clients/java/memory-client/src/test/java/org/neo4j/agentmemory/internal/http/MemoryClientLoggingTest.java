@@ -1,6 +1,7 @@
 package org.neo4j.agentmemory.internal.http;
 
 import org.neo4j.agentmemory.MemoryClient;
+import org.neo4j.agentmemory.MemoryClientConfiguration;
 import org.neo4j.agentmemory.conversation.CreateConversation;
 import org.neo4j.agentmemory.conversation.ListConversations;
 import org.neo4j.agentmemory.conversation.NewMessage;
@@ -62,7 +63,8 @@ class MemoryClientLoggingTest {
         assertThat(events.get(2).message()).contains("outcome=failure", "status=200",
                 "phase=decode", "requestId=req-decode", "errorType=ResponseDecodingException");
         assertThat(events.toString()).doesNotContain("outcome=success", "api-key-secret",
-                "invalid-json-secret", wireMock.getHttpBaseUrl());
+                "invalid-json-secret");
+        assertThat(events.subList(1, 3).toString()).doesNotContain(wireMock.getHttpBaseUrl());
     }
 
     @ParameterizedTest
@@ -71,7 +73,7 @@ class MemoryClientLoggingTest {
         var sink = new RecordingClientLogger(System.Logger.Level.valueOf(threshold));
         client(server, sink);
         assertThat(sink.entries()).containsExactly(new RecordingClientLogger.Entry(
-                System.Logger.Level.INFO, "event=client.initialized transport=jdk-http"));
+                System.Logger.Level.INFO, "event=client.initialized transport=jdk-http baseUrl=" + server.getHttpBaseUrl() + "/v1"));
         assertThat(getAllServeEvents()).isEmpty();
     }
 
@@ -231,7 +233,7 @@ class MemoryClientLoggingTest {
         var success = probe(classpath, "success");
         assertThat(success).contains("constructed", " INFO ", "org.neo4j.agentmemory.JdkMemoryClient");
         assertThat(success.lines().filter(line -> line.contains("event=client.initialized"))).hasSize(1);
-        assertThat(success).doesNotContain("operation.started", "probe-key", "https://memory.test");
+        assertThat(success).contains("baseUrl=https://memory.test/v1").doesNotContain("operation.started", "probe-key");
         assertThat(probe(classpath, "blank-key")).contains("IllegalArgumentException").doesNotContain("client.initialized");
         assertThat(probe(classpath, "null-endpoint")).contains("IllegalArgumentException").doesNotContain("client.initialized");
         var restricted = Path.of(MemoryClient.class.getProtectionDomain().getCodeSource().getLocation().toURI())
@@ -339,7 +341,8 @@ class MemoryClientLoggingTest {
         assertThat(events.get(1).message()).contains("event=operation.started");
         assertThat(events.get(2).message()).contains("event=operation.completed").contains(fields);
         assertThat(events.toString()).doesNotContain("api-key-secret", "payload-secret", "response-secret",
-                "body-secret", "header-secret", "encode-secret", "endpoint-secret", ID.toString());
+                "body-secret", "header-secret", "encode-secret", ID.toString());
+        assertThat(events.subList(1, 3).toString()).doesNotContain("endpoint-secret");
         return events.get(2).message();
     }
 
@@ -365,11 +368,13 @@ class MemoryClientLoggingTest {
         public static void main(String[] args) {
             try {
                 if (args[0].equals("blank-key")) {
-                    MemoryClient.create(URI.create("https://memory.test/v1"), " ");
+                    MemoryClient.create(MemoryClientConfiguration.builder()
+                            .baseUrl("https://memory.test/v1").apiKey(" ").build());
                 } else if (args[0].equals("null-endpoint")) {
-                    MemoryClient.create((URI) null, "probe-key");
+                    MemoryClient.create(MemoryClientConfiguration.builder().baseUrl(null).apiKey("probe-key").build());
                 } else {
-                    MemoryClient.create(URI.create("https://memory.test/v1"), "probe-key");
+                    MemoryClient.create(MemoryClientConfiguration.builder()
+                            .baseUrl("https://memory.test/v1").apiKey("probe-key").build());
                 }
                 System.out.println("constructed");
             } catch (IllegalArgumentException | MissingJsonCodecException failure) {

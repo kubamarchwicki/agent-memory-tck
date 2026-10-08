@@ -1,10 +1,10 @@
 package org.neo4j.agentmemory.conversation;
 
 import org.neo4j.agentmemory.MemoryClient;
+import org.neo4j.agentmemory.MemoryClientConfiguration;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.net.URI;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -55,7 +55,7 @@ class ConversationIdentityTest {
     }
 
     private static MemoryClient client() {
-        return MemoryClient.create(
-                URI.create("https://memory.test/v1"), "key");
+        return MemoryClient.create(MemoryClientConfiguration.builder()
+                .baseUrl("https://memory.test/v1").apiKey("key").build());
     }
 }

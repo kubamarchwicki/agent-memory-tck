@@ -1,6 +1,7 @@
 package org.neo4j.agentmemory.internal.http;
 
 import org.neo4j.agentmemory.MemoryClient;
+import org.neo4j.agentmemory.MemoryClientConfiguration;
 import org.neo4j.agentmemory.conversation.Conversation;
 import org.neo4j.agentmemory.conversation.ConversationContext;
 import org.neo4j.agentmemory.conversation.CreateConversation;
@@ -50,17 +51,13 @@ public final class JdkMemoryClient implements MemoryClient {
         this.httpClient = HttpClient.newHttpClient();
         this.jsonCodec = jsonCodec;
         this.logging = logging;
-        logging.initialized();
+        logging.initialized(endpoint);
     }
 
-    public static MemoryClient create(URI endpoint, String apiKey) {
-        if (endpoint == null || endpoint.toString().isEmpty()) {
-            throw new IllegalArgumentException("endpoint must not be null or empty");
-        }
-        if (apiKey == null || apiKey.isBlank()) {
-            throw new IllegalArgumentException("apiKey must not be blank");
-        }
-        return new JdkMemoryClient(endpoint, apiKey, JsonCodecs.jackson3(), new ClientLogging());
+    public static MemoryClient create(MemoryClientConfiguration configuration) {
+        Objects.requireNonNull(configuration, "configuration");
+        return new JdkMemoryClient(configuration.baseUrl(), configuration.apiKey(),
+                JsonCodecs.jackson3(), new ClientLogging());
     }
 
     @Override
@@ -268,7 +265,7 @@ public final class JdkMemoryClient implements MemoryClient {
     }
 
     private HttpRequest.Builder request(String path) {
-        return HttpRequest.newBuilder(URI.create(endpoint.toString() + path))
+        return HttpRequest.newBuilder(URI.create(endpoint.toString().replaceAll("/+$", "") + path))
                 .header("Authorization", "Bearer " + apiKey)
                 .header("Accept", "application/json");
     }
