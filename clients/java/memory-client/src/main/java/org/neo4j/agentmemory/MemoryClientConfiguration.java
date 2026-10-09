@@ -1,14 +1,13 @@
 package org.neo4j.agentmemory;
 
+import org.neo4j.agentmemory.http.HttpTransport;
+import org.neo4j.agentmemory.http.internal.HttpTransports;
+import org.springframework.web.client.RestClient;
+
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.util.Objects;
 import java.util.concurrent.Executor;
-import org.neo4j.agentmemory.http.HttpTransport;
-import org.neo4j.agentmemory.http.JdkHttpTransport;
-import org.neo4j.agentmemory.http.LangChain4jHttpTransport;
-import org.neo4j.agentmemory.http.RestClientHttpTransport;
-import org.springframework.web.client.RestClient;
 
 /**
  * Immutable settings for constructing a hosted memory client.
@@ -38,7 +37,7 @@ public final class MemoryClientConfiguration {
         return apiKey;
     }
 
-    HttpTransport httpTransport() {
+    public HttpTransport httpTransport() {
         return httpTransport;
     }
 
@@ -83,6 +82,11 @@ public final class MemoryClientConfiguration {
             return this;
         }
 
+        public Builder httpTransport(HttpTransport transport) {
+            this.httpTransport = transport;
+            return this;
+        }
+
         /**
          * Uses the supplied HTTP client as configured, including its executor,
          * proxy, timeouts, and TLS settings. The client is never closed.
@@ -93,7 +97,7 @@ public final class MemoryClientConfiguration {
          * @throws NullPointerException if httpClient is null
          */
         public Builder jdkHttpClient(HttpClient httpClient) {
-            this.httpTransport = new JdkHttpTransport(httpClient);
+            this.httpTransport = HttpTransports.select(httpClient);
             return this;
         }
 
@@ -111,7 +115,7 @@ public final class MemoryClientConfiguration {
          * @throws NullPointerException if restClient or executor is null
          */
         public Builder restClient(RestClient restClient, Executor executor) {
-            this.httpTransport = new RestClientHttpTransport(restClient, executor);
+            this.httpTransport = HttpTransports.select(restClient, executor);
             return this;
         }
 
@@ -127,7 +131,7 @@ public final class MemoryClientConfiguration {
          * @throws NullPointerException if httpClient or executor is null
          */
         public Builder langChain4jHttpClient(dev.langchain4j.http.client.HttpClient httpClient, Executor executor) {
-            this.httpTransport = new LangChain4jHttpTransport(httpClient, executor);
+            this.httpTransport = HttpTransports.select(httpClient, executor);
             return this;
         }
 
@@ -164,7 +168,9 @@ public final class MemoryClientConfiguration {
                     || url.getRawUserInfo() != null || url.getRawQuery() != null || url.getRawFragment() != null) {
                 throw invalidBaseUrl();
             }
-            return new MemoryClientConfiguration(url, resolvedKey, httpTransport);
+
+            var resolvedHttpTransport = httpTransport != null? httpTransport : HttpTransports.select(HttpClient.newHttpClient());
+            return new MemoryClientConfiguration(url, resolvedKey, resolvedHttpTransport);
         }
 
         private static IllegalArgumentException invalidBaseUrl() {

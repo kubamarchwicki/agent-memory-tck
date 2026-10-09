@@ -1,5 +1,11 @@
 package org.neo4j.agentmemory.http;
 
+import com.github.tomakehurst.wiremock.http.Fault;
+import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
+import com.github.tomakehurst.wiremock.junit5.WireMockTest;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.neo4j.agentmemory.MemoryClient;
 import org.neo4j.agentmemory.MemoryClientConfiguration;
 import org.neo4j.agentmemory.conversation.CreateConversation;
@@ -10,42 +16,26 @@ import org.neo4j.agentmemory.exception.MemoryClientException;
 import org.neo4j.agentmemory.exception.MemoryServiceException;
 import org.neo4j.agentmemory.exception.MissingJsonCodecException;
 import org.neo4j.agentmemory.exception.ResponseDecodingException;
+import org.neo4j.agentmemory.http.internal.HttpTransports;
 import org.neo4j.agentmemory.reasoning.NewReasoningStep;
 import org.neo4j.agentmemory.reasoning.NewToolCall;
 import org.neo4j.agentmemory.testsupport.OpenApiContract;
 
-import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
-import static com.github.tomakehurst.wiremock.client.WireMock.delete;
-import static com.github.tomakehurst.wiremock.client.WireMock.deleteRequestedFor;
-import static com.github.tomakehurst.wiremock.client.WireMock.get;
-import static com.github.tomakehurst.wiremock.client.WireMock.getAllServeEvents;
-import static com.github.tomakehurst.wiremock.client.WireMock.okJson;
-import static com.github.tomakehurst.wiremock.client.WireMock.post;
-import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
-import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
-import static com.github.tomakehurst.wiremock.client.WireMock.verify;
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.assertj.core.api.Assertions.catchThrowable;
-
-import com.github.tomakehurst.wiremock.http.Fault;
-import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
-import com.github.tomakehurst.wiremock.junit5.WireMockTest;
 import java.io.File;
 import java.net.URI;
 import java.net.http.HttpClient;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
-import java.util.function.Supplier;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
+import java.util.function.Supplier;
+
+import static com.github.tomakehurst.wiremock.client.WireMock.*;
+import static org.assertj.core.api.Assertions.*;
 
 @WireMockTest
 class MemoryClientLoggingTest {
@@ -60,7 +50,7 @@ class MemoryClientLoggingTest {
                         .withBody("{invalid-json-secret")));
         var sink = new RecordingClientLogger(System.Logger.Level.DEBUG);
         var client = new HttpMemoryClient(URI.create(wireMock.getHttpBaseUrl() + "/v1"),
-                "api-key-secret", new JdkHttpTransport(HttpClient.newHttpClient()), new Jackson3JsonCodec(), new ClientLogging(sink));
+                "api-key-secret", HttpTransports.select(HttpClient.newHttpClient()), new Jackson3JsonCodec(), new ClientLogging(sink));
         assertThatThrownBy(() -> client.listConversations(new ListConversations(20)).join())
                 .hasCauseInstanceOf(ResponseDecodingException.class);
         var events = sink.awaitEvents(3);
@@ -186,7 +176,7 @@ class MemoryClientLoggingTest {
         };
         var sink = debug();
         var client = new HttpMemoryClient(URI.create(server.getHttpBaseUrl() + "/v1"),
-                "api-key-secret", new JdkHttpTransport(HttpClient.newHttpClient()), codec, new ClientLogging(sink));
+                "api-key-secret", HttpTransports.select(HttpClient.newHttpClient()), codec, new ClientLogging(sink));
         var future = client.createConversation(new CreateConversation());
         assertThat(catchThrowable(future::join).getCause()).isInstanceOf(MemoryClientException.class).hasCause(original);
         terminal(sink, "createConversation", "phase=encode", "outcome=failure");
@@ -341,7 +331,7 @@ class MemoryClientLoggingTest {
 
     private static HttpMemoryClient client(WireMockRuntimeInfo server, RecordingClientLogger sink) {
         return new HttpMemoryClient(URI.create(server.getHttpBaseUrl() + "/v1"), "api-key-secret",
-                new JdkHttpTransport(HttpClient.newHttpClient()), new Jackson3JsonCodec(), new ClientLogging(sink));
+                HttpTransports.select(HttpClient.newHttpClient()), new Jackson3JsonCodec(), new ClientLogging(sink));
     }
 
     private static String terminal(RecordingClientLogger sink, String operation, String... fields) throws Exception {

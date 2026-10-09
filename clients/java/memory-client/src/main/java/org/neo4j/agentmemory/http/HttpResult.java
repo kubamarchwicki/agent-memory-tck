@@ -1,10 +1,6 @@
 package org.neo4j.agentmemory.http;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.TreeMap;
+import java.util.*;
 
 /** An uninterpreted HTTP response with case-insensitive headers. */
 public record HttpResult(int status, Map<String, List<String>> headers, byte[] body) {

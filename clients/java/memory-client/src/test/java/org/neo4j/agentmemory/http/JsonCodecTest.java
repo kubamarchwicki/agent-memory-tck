@@ -1,22 +1,22 @@
 package org.neo4j.agentmemory.http;
 
-import org.neo4j.agentmemory.entity.Entity;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.neo4j.agentmemory.conversation.ConversationContext;
 import org.neo4j.agentmemory.conversation.Message;
 import org.neo4j.agentmemory.conversation.NewMessage;
+import org.neo4j.agentmemory.entity.Entity;
 import org.neo4j.agentmemory.reasoning.ToolCallStatus;
+
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.UUID;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.neo4j.agentmemory.conversation.MessageRole.USER;
-
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.UUID;
-import org.junit.jupiter.params.ParameterizedClass;
-import org.junit.jupiter.params.provider.EnumSource;
-import org.junit.jupiter.api.Test;
 
 @ParameterizedClass
 @EnumSource(JsonCodecUnderTest.class)

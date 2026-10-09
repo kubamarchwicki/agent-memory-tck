@@ -1,21 +1,22 @@
 package org.neo4j.agentmemory;
 
-import static com.github.tomakehurst.wiremock.client.WireMock.*;
-import static org.assertj.core.api.Assertions.assertThat;
-
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
 import dev.langchain4j.http.client.jdk.JdkHttpClient;
-import java.util.Locale;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 import org.neo4j.agentmemory.conversation.NewMessage;
 import org.neo4j.agentmemory.exception.MissingJsonCodecException;
 import org.neo4j.agentmemory.testsupport.EnvironmentProbe;
 import org.neo4j.agentmemory.testsupport.OpenApiContract;
+
+import java.util.Locale;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+
+import static com.github.tomakehurst.wiremock.client.WireMock.*;
+import static org.assertj.core.api.Assertions.assertThat;
 
 @WireMockTest
 class JsonCodecSelectionTest {

@@ -1,23 +1,23 @@
 package org.neo4j.agentmemory.testsupport;
 
-import static com.github.tomakehurst.wiremock.client.WireMock.getAllServeEvents;
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.fail;
-
 import com.atlassian.oai.validator.OpenApiInteractionValidator;
 import com.atlassian.oai.validator.wiremock.junit5.WireMockRequestResponseUtil;
 import com.github.tomakehurst.wiremock.client.ResponseDefinitionBuilder;
 import com.github.tomakehurst.wiremock.client.WireMock;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
+
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
-import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.json.JsonMapper;
+
+import static com.github.tomakehurst.wiremock.client.WireMock.getAllServeEvents;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.fail;
 
 public final class OpenApiContract {
     private static final JsonMapper MAPPER = JsonMapper.builder().build();

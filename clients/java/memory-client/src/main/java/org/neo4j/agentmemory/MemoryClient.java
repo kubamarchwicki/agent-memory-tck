@@ -1,11 +1,6 @@
 package org.neo4j.agentmemory;
 
-import org.neo4j.agentmemory.conversation.Conversation;
-import org.neo4j.agentmemory.conversation.ConversationContext;
-import org.neo4j.agentmemory.conversation.CreateConversation;
-import org.neo4j.agentmemory.conversation.ListConversations;
-import org.neo4j.agentmemory.conversation.Message;
-import org.neo4j.agentmemory.conversation.NewMessage;
+import org.neo4j.agentmemory.conversation.*;
 import org.neo4j.agentmemory.entity.Entity;
 import org.neo4j.agentmemory.entity.EntitySearch;
 import org.neo4j.agentmemory.exception.MemoryClientException;
@@ -13,12 +8,7 @@ import org.neo4j.agentmemory.exception.MemoryServiceException;
 import org.neo4j.agentmemory.exception.MissingJsonCodecException;
 import org.neo4j.agentmemory.exception.ResponseDecodingException;
 import org.neo4j.agentmemory.http.HttpMemoryClient;
-import org.neo4j.agentmemory.reasoning.NewReasoningStep;
-import org.neo4j.agentmemory.reasoning.NewToolCall;
-import org.neo4j.agentmemory.reasoning.ReasoningStep;
-import org.neo4j.agentmemory.reasoning.ReasoningStepExplanation;
-import org.neo4j.agentmemory.reasoning.ReasoningTrace;
-import org.neo4j.agentmemory.reasoning.ToolCall;
+import org.neo4j.agentmemory.reasoning.*;
 
 import java.time.Duration;
 import java.util.List;
@@ -126,8 +116,7 @@ public interface MemoryClient {
      * @throws MissingJsonCodecException if neither Jackson 3 nor Jackson 2 is usable
      */
     static MemoryClient create(MemoryClientConfiguration configuration) {
-        return HttpMemoryClient.create(Objects.requireNonNull(configuration, "configuration"),
-                configuration.httpTransport());
+        return HttpMemoryClient.create(Objects.requireNonNull(configuration, "configuration"));
     }
 
     /**

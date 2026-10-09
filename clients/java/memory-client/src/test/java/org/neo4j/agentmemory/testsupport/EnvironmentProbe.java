@@ -1,16 +1,16 @@
 package org.neo4j.agentmemory.testsupport;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
 import java.io.File;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
-import java.util.stream.Collectors;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 /** Runs public API probes with isolated NAMS environment settings. */
 public final class EnvironmentProbe {

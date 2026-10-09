@@ -1,5 +1,6 @@
 package org.neo4j.agentmemory;
 
+import org.junit.jupiter.api.Test;
 import org.neo4j.agentmemory.conversation.Conversation;
 import org.neo4j.agentmemory.conversation.CreateConversation;
 import org.neo4j.agentmemory.entity.Entity;
@@ -8,12 +9,11 @@ import org.neo4j.agentmemory.reasoning.NewToolCall;
 import org.neo4j.agentmemory.reasoning.ReasoningStep;
 import org.neo4j.agentmemory.reasoning.ToolCall;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
-import org.junit.jupiter.api.Test;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 class RecordStateTest {
     @Test

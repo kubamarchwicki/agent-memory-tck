@@ -1,20 +1,24 @@
-package org.neo4j.agentmemory.http;
+package org.neo4j.agentmemory.http.internal;
+
+import org.neo4j.agentmemory.http.HttpCall;
+import org.neo4j.agentmemory.http.HttpResult;
+import org.neo4j.agentmemory.http.HttpTransport;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.web.client.RestClient;
 
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.web.client.RestClient;
 
 /**
  * Sends blocking exchanges through an application-owned Spring client. The
  * client's own default headers are dropped so credentials or tenancy headers
  * meant for other services are never sent to the memory service.
  */
-public final class RestClientHttpTransport implements HttpTransport {
+final class RestClientHttpTransport implements HttpTransport {
     private final RestClient restClient;
     private final Executor executor;
 

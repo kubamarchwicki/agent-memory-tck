@@ -6,11 +6,7 @@ import org.neo4j.agentmemory.reasoning.ReasoningStep;
 import org.neo4j.agentmemory.reasoning.ReasoningTrace;
 
 import java.time.Instant;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
 public final class Conversation {

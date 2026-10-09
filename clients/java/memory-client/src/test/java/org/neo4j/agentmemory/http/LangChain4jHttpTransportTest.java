@@ -1,12 +1,5 @@
 package org.neo4j.agentmemory.http;
 
-import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
-import static com.github.tomakehurst.wiremock.client.WireMock.get;
-import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
-import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.catchThrowable;
-
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
 import dev.langchain4j.http.client.HttpClient;
@@ -15,15 +8,21 @@ import dev.langchain4j.http.client.SuccessfulHttpResponse;
 import dev.langchain4j.http.client.jdk.JdkHttpClient;
 import dev.langchain4j.http.client.sse.ServerSentEventListener;
 import dev.langchain4j.http.client.sse.ServerSentEventParser;
-import java.net.URI;
-import java.util.UUID;
-import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 import org.neo4j.agentmemory.MemoryClient;
 import org.neo4j.agentmemory.MemoryClientConfiguration;
 import org.neo4j.agentmemory.exception.MemoryServiceException;
+import org.neo4j.agentmemory.http.internal.HttpTransports;
 import org.neo4j.agentmemory.testsupport.HttpClientUnderTest;
 import org.neo4j.agentmemory.testsupport.OpenApiContract;
+
+import java.net.URI;
+import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import static com.github.tomakehurst.wiremock.client.WireMock.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.catchThrowable;
 
 @WireMockTest
 class LangChain4jHttpTransportTest {
@@ -61,7 +60,7 @@ class LangChain4jHttpTransportTest {
     void nonSuccessEventsOmitTheRequestId(WireMockRuntimeInfo server) throws InterruptedException {
         var sink = new RecordingClientLogger(System.Logger.Level.DEBUG);
         var client = new HttpMemoryClient(URI.create(server.getHttpBaseUrl() + "/v1"), "api-key-secret",
-                new LangChain4jHttpTransport(JdkHttpClient.builder().build(), HttpClientUnderTest.TEST_EXECUTOR),
+                HttpTransports.select(JdkHttpClient.builder().build(), HttpClientUnderTest.TEST_EXECUTOR),
                 new Jackson3JsonCodec(), new ClientLogging(sink));
         stubFor(get(urlEqualTo(PATH)).willReturn(aResponse().withStatus(404).withHeader("X-Request-ID", "req-404")));
 

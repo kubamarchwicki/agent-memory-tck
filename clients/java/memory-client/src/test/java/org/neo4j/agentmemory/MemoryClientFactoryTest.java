@@ -1,22 +1,23 @@
 package org.neo4j.agentmemory;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static com.github.tomakehurst.wiremock.client.WireMock.*;
+import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
+import com.github.tomakehurst.wiremock.junit5.WireMockTest;
+import org.junit.jupiter.api.Test;
+import org.neo4j.agentmemory.conversation.ListConversations;
+import org.neo4j.agentmemory.testsupport.EnvironmentProbe;
+import org.neo4j.agentmemory.testsupport.OpenApiContract;
 
-import java.util.Map;
 import java.net.http.HttpClient;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.TimeUnit;
-import com.github.tomakehurst.wiremock.junit5.WireMockTest;
-import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
-import org.junit.jupiter.api.Test;
-import org.neo4j.agentmemory.conversation.ListConversations;
-import org.neo4j.agentmemory.testsupport.OpenApiContract;
-import org.neo4j.agentmemory.testsupport.EnvironmentProbe;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import static com.github.tomakehurst.wiremock.client.WireMock.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @WireMockTest
 class MemoryClientFactoryTest {

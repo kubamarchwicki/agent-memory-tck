@@ -1,11 +1,12 @@
 package org.neo4j.agentmemory.reasoning;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
-import org.junit.jupiter.api.Test;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 class ReasoningModelsTest {
     private static final UUID ID =

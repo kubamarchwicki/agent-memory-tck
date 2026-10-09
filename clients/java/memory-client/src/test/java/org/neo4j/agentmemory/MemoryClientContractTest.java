@@ -1,41 +1,36 @@
 package org.neo4j.agentmemory;
 
+import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedClass;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.neo4j.agentmemory.http.JsonCodecUnderTest;
-import org.neo4j.agentmemory.testsupport.HttpClientUnderTest;
 import org.neo4j.agentmemory.conversation.Conversation;
 import org.neo4j.agentmemory.conversation.CreateConversation;
 import org.neo4j.agentmemory.conversation.ListConversations;
 import org.neo4j.agentmemory.conversation.NewMessage;
 import org.neo4j.agentmemory.entity.EntitySearch;
+import org.neo4j.agentmemory.http.JsonCodecUnderTest;
 import org.neo4j.agentmemory.reasoning.NewReasoningStep;
 import org.neo4j.agentmemory.reasoning.NewToolCall;
 import org.neo4j.agentmemory.reasoning.ToolCallStatus;
+import org.neo4j.agentmemory.testsupport.HttpClientUnderTest;
 import org.neo4j.agentmemory.testsupport.OpenApiContract;
 
-import static com.github.tomakehurst.wiremock.client.WireMock.delete;
-import static com.github.tomakehurst.wiremock.client.WireMock.get;
-import static com.github.tomakehurst.wiremock.client.WireMock.post;
-import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
-import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
-import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
-import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatNoException;
-import static org.junit.jupiter.params.provider.Arguments.arguments;
-
-import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Stream;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.RegisterExtension;
+
+import static com.github.tomakehurst.wiremock.client.WireMock.*;
+import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatNoException;
+import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 @ParameterizedClass
 @MethodSource("clients")

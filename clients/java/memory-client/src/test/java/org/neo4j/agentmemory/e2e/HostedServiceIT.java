@@ -1,32 +1,31 @@
 package org.neo4j.agentmemory.e2e;
 
-import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatCode;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.junit.jupiter.api.Assumptions.assumeFalse;
-import static org.neo4j.agentmemory.conversation.NewMessage.user;
-import static org.neo4j.agentmemory.conversation.NewMessage.assistant;
-import static org.neo4j.agentmemory.conversation.MessageRole.ASSISTANT;
-import static org.neo4j.agentmemory.conversation.MessageRole.USER;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import org.neo4j.agentmemory.MemoryClient;
+import org.neo4j.agentmemory.conversation.Conversation;
+import org.neo4j.agentmemory.conversation.CreateConversation;
+import org.neo4j.agentmemory.conversation.ListConversations;
+import org.neo4j.agentmemory.conversation.Message;
+import org.neo4j.agentmemory.e2e.assertions.ConversationAssert;
+import org.neo4j.agentmemory.e2e.assertions.ConversationContextAssert;
+import org.neo4j.agentmemory.e2e.assertions.MessageAssert;
+import org.neo4j.agentmemory.reasoning.NewReasoningStep;
+import org.neo4j.agentmemory.reasoning.NewToolCall;
+import org.neo4j.agentmemory.reasoning.ToolCallStatus;
 
 import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
-import org.neo4j.agentmemory.conversation.Conversation;
-import org.neo4j.agentmemory.conversation.CreateConversation;
-import org.neo4j.agentmemory.conversation.ListConversations;
-import org.neo4j.agentmemory.MemoryClient;
-import org.neo4j.agentmemory.conversation.Message;
-import org.neo4j.agentmemory.reasoning.NewReasoningStep;
-import org.neo4j.agentmemory.reasoning.NewToolCall;
-import org.neo4j.agentmemory.reasoning.ToolCallStatus;
-import org.neo4j.agentmemory.e2e.assertions.ConversationAssert;
-import org.neo4j.agentmemory.e2e.assertions.ConversationContextAssert;
-import org.neo4j.agentmemory.e2e.assertions.MessageAssert;
+
+import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.assertj.core.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
+import static org.neo4j.agentmemory.conversation.MessageRole.ASSISTANT;
+import static org.neo4j.agentmemory.conversation.MessageRole.USER;
+import static org.neo4j.agentmemory.conversation.NewMessage.assistant;
+import static org.neo4j.agentmemory.conversation.NewMessage.user;
 
 /**
  * Focused end-to-end tests against the live hosted Neo4j Agent Memory Service.

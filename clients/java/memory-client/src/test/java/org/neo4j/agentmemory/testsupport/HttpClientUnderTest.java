@@ -1,11 +1,12 @@
 package org.neo4j.agentmemory.testsupport;
 
-import java.net.http.HttpClient;
+import org.neo4j.agentmemory.MemoryClientConfiguration;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
+
+import java.net.http.HttpClient;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
-import org.neo4j.agentmemory.MemoryClientConfiguration;
 
 /** Configures the clients exercised by the shared HTTP suites. */
 public enum HttpClientUnderTest {

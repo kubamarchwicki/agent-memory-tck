@@ -1,16 +1,17 @@
 package org.neo4j.agentmemory.e2e;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import org.neo4j.agentmemory.MemoryClient;
+import org.neo4j.agentmemory.conversation.CreateConversation;
+import org.neo4j.agentmemory.conversation.ListConversations;
 
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
-import org.neo4j.agentmemory.conversation.CreateConversation;
-import org.neo4j.agentmemory.conversation.ListConversations;
-import org.neo4j.agentmemory.MemoryClient;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 class ConversationMetadataIT {
     @Test

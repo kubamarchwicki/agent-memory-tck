@@ -1,4 +1,8 @@
-package org.neo4j.agentmemory.http;
+package org.neo4j.agentmemory.http.internal;
+
+import org.neo4j.agentmemory.http.HttpCall;
+import org.neo4j.agentmemory.http.HttpResult;
+import org.neo4j.agentmemory.http.HttpTransport;
 
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -7,7 +11,7 @@ import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 
 /** Sends exchanges through an application-owned JDK HTTP client. */
-public final class JdkHttpTransport implements HttpTransport {
+final class JdkHttpTransport implements HttpTransport {
     private final HttpClient httpClient;
 
     public JdkHttpTransport(HttpClient httpClient) {
@@ -19,8 +23,8 @@ public final class JdkHttpTransport implements HttpTransport {
 
     @Override
     public CompletableFuture<HttpResult> send(HttpCall call) {
-        var publisher = call.body() == null ? HttpRequest.BodyPublishers.noBody()
-                : HttpRequest.BodyPublishers.ofByteArray(call.body().body());
+        var publisher = call.body() instanceof HttpCall.ByteArrayBody ? HttpRequest.BodyPublishers.ofByteArray(call.body().body())
+                : HttpRequest.BodyPublishers.noBody();
         var request = HttpRequest.newBuilder(call.uri()).method(call.method(), publisher);
         call.headers().forEach(request::header);
         return httpClient.sendAsync(request.build(), HttpResponse.BodyHandlers.ofByteArray())

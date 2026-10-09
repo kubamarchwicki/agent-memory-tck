@@ -1,10 +1,11 @@
 package org.neo4j.agentmemory.e2e.assertions;
 
+import org.assertj.core.api.AbstractAssert;
+import org.neo4j.agentmemory.conversation.Conversation;
+
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
-import org.assertj.core.api.AbstractAssert;
-import org.neo4j.agentmemory.conversation.Conversation;
 
 public final class ConversationAssert extends AbstractAssert<ConversationAssert, Conversation> {
     private ConversationAssert(Conversation actual) {

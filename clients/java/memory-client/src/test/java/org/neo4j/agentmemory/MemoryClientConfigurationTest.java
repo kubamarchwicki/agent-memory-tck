@@ -1,16 +1,17 @@
 package org.neo4j.agentmemory;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EmptySource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.neo4j.agentmemory.testsupport.EnvironmentProbe;
+
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.util.Map;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class MemoryClientConfigurationTest {
     @Test
@@ -54,9 +55,9 @@ class MemoryClientConfigurationTest {
     }
 
     @Test
-    void configurationWithoutHttpClientHasNoTransport() {
+    void configurationWithoutHttpClientDefaultsToJdkTransport() {
         assertThat(MemoryClientConfiguration.builder().baseUrl("https://memory.test/v1")
-                .apiKey("key").build().httpTransport()).isNull();
+                .apiKey("key").build().httpTransport().name()).isEqualTo("jdk-http");
     }
 
     @Test

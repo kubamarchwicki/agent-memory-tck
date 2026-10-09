@@ -1,9 +1,10 @@
 package org.neo4j.agentmemory.e2e.assertions;
 
-import java.util.Objects;
 import org.assertj.core.api.AbstractAssert;
 import org.neo4j.agentmemory.conversation.Message;
 import org.neo4j.agentmemory.conversation.MessageRole;
+
+import java.util.Objects;
 
 public final class MessageAssert extends AbstractAssert<MessageAssert, Message> {
     private MessageAssert(Message actual) { super(actual, MessageAssert.class); }

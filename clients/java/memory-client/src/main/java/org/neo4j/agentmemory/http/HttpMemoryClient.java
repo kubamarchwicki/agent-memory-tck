@@ -2,35 +2,23 @@ package org.neo4j.agentmemory.http;
 
 import org.neo4j.agentmemory.MemoryClient;
 import org.neo4j.agentmemory.MemoryClientConfiguration;
-import org.neo4j.agentmemory.conversation.Conversation;
-import org.neo4j.agentmemory.conversation.ConversationContext;
-import org.neo4j.agentmemory.conversation.CreateConversation;
-import org.neo4j.agentmemory.conversation.ListConversations;
-import org.neo4j.agentmemory.conversation.Message;
-import org.neo4j.agentmemory.conversation.NewMessage;
+import org.neo4j.agentmemory.conversation.*;
 import org.neo4j.agentmemory.entity.Entity;
 import org.neo4j.agentmemory.entity.EntitySearch;
 import org.neo4j.agentmemory.exception.MemoryClientException;
 import org.neo4j.agentmemory.exception.MemoryServiceException;
 import org.neo4j.agentmemory.exception.ResponseDecodingException;
-import org.neo4j.agentmemory.reasoning.NewReasoningStep;
-import org.neo4j.agentmemory.reasoning.NewToolCall;
-import org.neo4j.agentmemory.reasoning.ReasoningStep;
-import org.neo4j.agentmemory.reasoning.ReasoningStepExplanation;
-import org.neo4j.agentmemory.reasoning.ReasoningTrace;
-import org.neo4j.agentmemory.reasoning.ToolCall;
-import org.neo4j.agentmemory.reasoning.ToolCallStatus;
-
-import static java.nio.charset.StandardCharsets.UTF_8;
+import org.neo4j.agentmemory.reasoning.*;
 
 import java.net.URI;
-import java.net.http.HttpClient;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.function.Function;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 /** HTTP memory operations. Internal implementation; use MemoryClient factories. */
 public final class HttpMemoryClient implements MemoryClient {
@@ -51,12 +39,10 @@ public final class HttpMemoryClient implements MemoryClient {
         logging.initialized(endpoint, transport.name(), jsonCodec.name());
     }
 
-    public static MemoryClient create(MemoryClientConfiguration configuration, HttpTransport transport) {
+    public static MemoryClient create(MemoryClientConfiguration configuration) {
         var jsonCodec = JsonCodecs.select();
-        var selectedTransport = transport == null
-                ? new JdkHttpTransport(HttpClient.newHttpClient()) : transport;
         return new HttpMemoryClient(configuration.baseUrl(), configuration.apiKey(),
-                selectedTransport, jsonCodec, new ClientLogging());
+                configuration.httpTransport(), jsonCodec, new ClientLogging());
     }
 
     @Override

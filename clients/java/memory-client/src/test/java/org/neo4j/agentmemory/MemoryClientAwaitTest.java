@@ -1,12 +1,12 @@
 package org.neo4j.agentmemory;
 
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.neo4j.agentmemory.exception.MemoryClientException;
 import org.neo4j.agentmemory.exception.MemoryServiceException;
 import org.neo4j.agentmemory.exception.ResponseDecodingException;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.neo4j.agentmemory.MemoryClient.await;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -15,17 +15,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.ResourceBundle;
-import java.util.concurrent.CancellationException;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+import java.util.concurrent.*;
 import java.util.stream.IntStream;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.NullAndEmptySource;
-import org.junit.jupiter.params.provider.ValueSource;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.neo4j.agentmemory.MemoryClient.await;
 
 class MemoryClientAwaitTest {
     private static final Duration SECOND = Duration.ofSeconds(1);

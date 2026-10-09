@@ -1,13 +1,13 @@
 package org.neo4j.agentmemory.http;
 
+import org.junit.jupiter.api.Test;
 import org.neo4j.agentmemory.exception.MissingJsonCodecException;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
-import org.junit.jupiter.api.Test;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class JsonCodecsTest {
     @Test
