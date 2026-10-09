@@ -35,7 +35,9 @@ final class LangChain4jHttpTransport implements HttpTransport {
         return CompletableFuture.supplyAsync(() -> {
             var request = HttpRequest.builder().method(HttpMethod.valueOf(call.method()))
                     .url(call.uri().toString()).addHeaders(call.headers());
-            request.body(new String(call.body().body(), UTF_8));
+            if (!(call.body() instanceof HttpCall.NoBody)) {
+                request.body(new String(call.body().body(), UTF_8));
+            }
             try {
                 var response = httpClient.execute(request.build());
                 return new HttpResult(response.statusCode(), response.headers(),

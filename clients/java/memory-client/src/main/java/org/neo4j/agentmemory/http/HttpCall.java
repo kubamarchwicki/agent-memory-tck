@@ -5,6 +5,10 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.regex.Pattern;
 
+/**
+ * One memory request: a method, an absolute URI template with UUID or Integer
+ * variables, the memory headers, and a body.
+ */
 public sealed interface HttpCall permits HttpCallRecord {
     String method();
     String uriTemplate();
@@ -13,6 +17,11 @@ public sealed interface HttpCall permits HttpCallRecord {
     Body body();
     URI uri();
 
+    /**
+     * A request body. The memory client sends {@link NoBody} or
+     * {@link ByteArrayBody}; transports send the bytes of any body other than
+     * {@code NoBody}.
+     */
     interface Body {
         default byte[] body() {
             return new byte[] {};

@@ -20,7 +20,10 @@ import java.util.function.Function;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
-/** HTTP memory operations. Internal implementation; use MemoryClient factories. */
+/**
+ * HTTP memory operations. Internal implementation and not part of the
+ * {@link HttpTransport} SPI; use MemoryClient factories.
+ */
 public final class HttpMemoryClient implements MemoryClient {
     private static final int BODY_EXCERPT_LIMIT = 1024;
 

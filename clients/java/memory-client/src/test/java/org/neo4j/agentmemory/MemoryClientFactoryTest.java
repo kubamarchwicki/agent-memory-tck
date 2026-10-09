@@ -29,7 +29,8 @@ class MemoryClientFactoryTest {
         stubFor(get(urlEqualTo("/v1/conversations/" + id)).willReturn(response));
 
         var output = EnvironmentProbe.runOnClasspath(
-                EnvironmentProbe.classpathWithout("spring-", "langchain4j-", "micrometer-"),
+                EnvironmentProbe.classpathWithout(
+                        "spring-", "langchain4j-", "micrometer-", "reactor-", "reactive-streams-", "netty-"),
                 FrameworkFreeProbe.class,
                 Map.of("NAMS_API_KEY", "workspace-key", "NAMS_BASE_URL", server.getHttpBaseUrl() + "/v1"),
                 id.toString());

@@ -107,7 +107,7 @@ public interface MemoryClient {
 
     /**
      * Constructs a client from validated configuration using the configured HTTP
-     * client, or a new default JDK HTTP client when none is configured.
+     * client or transport, or the default JDK HTTP client when none is configured.
      * Logs the base URL without checking remote reachability or authentication.
      *
      * @param configuration immutable settings produced by the configuration builder

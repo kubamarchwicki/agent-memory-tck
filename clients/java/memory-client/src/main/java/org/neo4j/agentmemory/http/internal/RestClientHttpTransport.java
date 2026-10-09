@@ -3,7 +3,6 @@ package org.neo4j.agentmemory.http.internal;
 import org.neo4j.agentmemory.http.HttpCall;
 import org.neo4j.agentmemory.http.HttpResult;
 import org.neo4j.agentmemory.http.HttpTransport;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.web.client.RestClient;
 
@@ -15,16 +14,15 @@ import java.util.concurrent.Executor;
 
 /**
  * Sends blocking exchanges through an application-owned Spring client. The
- * client's own default headers are dropped so credentials or tenancy headers
- * meant for other services are never sent to the memory service.
+ * client's own defaults, such as headers and cookies, still apply; memory
+ * headers replace same-named ones.
  */
 final class RestClientHttpTransport implements HttpTransport {
     private final RestClient restClient;
     private final Executor executor;
 
     public RestClientHttpTransport(RestClient restClient, Executor executor) {
-        this.restClient = Objects.requireNonNull(restClient, "restClient")
-                .mutate().defaultHeaders(HttpHeaders::clear).build();
+        this.restClient = Objects.requireNonNull(restClient, "restClient");
         this.executor = Objects.requireNonNull(executor, "executor");
     }
 
@@ -39,7 +37,9 @@ final class RestClientHttpTransport implements HttpTransport {
             var request = restClient.method(HttpMethod.valueOf(call.method()))
                     .uri(call.uriTemplate(), call.uriVariables())
                     .headers(headers -> call.headers().forEach(headers::set));
-            request.body(call.body().body());
+            if (!(call.body() instanceof HttpCall.NoBody)) {
+                request.body(call.body().body());
+            }
             return request.exchange((sentRequest, response) -> {
                 var headers = new LinkedHashMap<String, List<String>>();
                 response.getHeaders().forEach(headers::put);

@@ -7,12 +7,14 @@ import io.micrometer.observation.tck.TestObservationRegistryAssert;
 import org.junit.jupiter.api.Test;
 import org.neo4j.agentmemory.MemoryClient;
 import org.neo4j.agentmemory.MemoryClientConfiguration;
+import org.neo4j.agentmemory.exception.MemoryClientException;
 import org.neo4j.agentmemory.exception.MemoryServiceException;
-import org.neo4j.agentmemory.testsupport.HttpClientUnderTest;
 import org.neo4j.agentmemory.testsupport.OpenApiContract;
+import org.springframework.core.io.buffer.DataBufferLimitException;
 import org.springframework.http.HttpStatusCode;
-import org.springframework.http.client.JdkClientHttpRequestFactory;
-import org.springframework.web.client.RestClient;
+import org.springframework.web.reactive.function.client.ClientRequest;
+import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Mono;
 
 import java.util.UUID;
 
@@ -21,17 +23,17 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
 
 @WireMockTest
-class RestClientHttpTransportTest {
+class WebClientHttpTransportTest {
     private static final UUID ID = UUID.fromString("a2f55d70-838f-4c41-ae7d-dad30fd25720");
     private static final String PATH = "/v1/conversations/" + ID;
 
     @Test
     void observationsTagTheRouteTemplate(WireMockRuntimeInfo server) {
         var registry = TestObservationRegistry.create();
-        var restClient = builder().observationRegistry(registry).build();
+        var webClient = WebClient.builder().observationRegistry(registry).build();
         stubConversation();
 
-        client(server, restClient).getConversation(ID).join();
+        client(server, webClient).getConversation(ID).join();
 
         TestObservationRegistryAssert.assertThat(registry)
                 .hasObservationWithNameEqualTo("http.client.requests").that()
@@ -40,14 +42,12 @@ class RestClientHttpTransportTest {
     }
 
     @Test
-    void runsApplicationInterceptors(WireMockRuntimeInfo server) {
-        var restClient = builder().requestInterceptor((request, body, execution) -> {
-            request.getHeaders().set("X-App-Trace", "trace-1");
-            return execution.execute(request, body);
-        }).build();
+    void runsApplicationFilters(WireMockRuntimeInfo server) {
+        var webClient = WebClient.builder().filter((request, next) -> next.exchange(
+                ClientRequest.from(request).header("X-App-Trace", "trace-1").build())).build();
         stubConversation();
 
-        client(server, restClient).getConversation(ID).join();
+        client(server, webClient).getConversation(ID).join();
 
         verify(getRequestedFor(urlEqualTo(PATH)).withHeader("X-App-Trace", equalTo("trace-1")));
         assertContract();
@@ -55,16 +55,15 @@ class RestClientHttpTransportTest {
 
     @Test
     void appliesApplicationDefaultsWhileMemoryHeadersWin(WireMockRuntimeInfo server) {
-        var restClient = builder().baseUrl("http://wrong.invalid/api")
+        var webClient = WebClient.builder().baseUrl("http://wrong.invalid/api")
                 .defaultHeader("Authorization", "Bearer app-token")
                 .defaultHeader("Accept", "application/xml")
                 .defaultHeader("X-App-Tenant", "tenant-1")
                 .defaultCookie("SESSION", "app-session")
-                .defaultRequest(request -> request.header("X-App-Request", "request-1")
-                        .header("Authorization", "Bearer app-request-token")).build();
+                .defaultRequest(request -> request.header("X-App-Request", "request-1")).build();
         stubConversation();
 
-        client(server, restClient).getConversation(ID).join();
+        client(server, webClient).getConversation(ID).join();
 
         verify(getRequestedFor(urlEqualTo(PATH))
                 .withHeader("Authorization", equalTo("Bearer nams-key"))
@@ -75,14 +74,13 @@ class RestClientHttpTransportTest {
     }
 
     @Test
-    void bypassesRestClientStatusHandlers(WireMockRuntimeInfo server) {
-        var restClient = builder().defaultStatusHandler(HttpStatusCode::isError, (request, response) -> {
-            throw new IllegalStateException("application status handler");
-        }).build();
+    void bypassesWebClientStatusHandlers(WireMockRuntimeInfo server) {
+        var webClient = WebClient.builder().defaultStatusHandler(HttpStatusCode::isError,
+                response -> Mono.error(new IllegalStateException("application status handler"))).build();
         stubFor(get(urlEqualTo(PATH)).willReturn(aResponse().withStatus(503)
                 .withHeader("X-Request-ID", "req-503")));
 
-        var failure = catchThrowable(() -> client(server, restClient).getConversation(ID).join());
+        var failure = catchThrowable(() -> client(server, webClient).getConversation(ID).join());
 
         assertThat(failure).hasCauseInstanceOf(MemoryServiceException.class);
         var serviceFailure = (MemoryServiceException) failure.getCause();
@@ -91,14 +89,22 @@ class RestClientHttpTransportTest {
                 .anyMatch(name -> name.equalsIgnoreCase("x-request-id"));
     }
 
-    private static RestClient.Builder builder() {
-        return RestClient.builder().requestFactory(new JdkClientHttpRequestFactory());
+    @Test
+    void responsesBeyondTheApplicationBufferLimitFailTheTransport(WireMockRuntimeInfo server) {
+        var webClient = WebClient.builder()
+                .codecs(codecs -> codecs.defaultCodecs().maxInMemorySize(16)).build();
+        stubConversation();
+
+        var failure = catchThrowable(() -> client(server, webClient).getConversation(ID).join());
+
+        assertThat(failure).hasCauseInstanceOf(MemoryClientException.class)
+                .hasRootCauseInstanceOf(DataBufferLimitException.class);
     }
 
-    private static MemoryClient client(WireMockRuntimeInfo server, RestClient restClient) {
+    private static MemoryClient client(WireMockRuntimeInfo server, WebClient webClient) {
         return MemoryClient.create(MemoryClientConfiguration.builder()
                 .baseUrl(server.getHttpBaseUrl() + "/v1").apiKey("nams-key")
-                .restClient(restClient, HttpClientUnderTest.TEST_EXECUTOR).build());
+                .webClient(webClient).build());
     }
 
     private static void stubConversation() {

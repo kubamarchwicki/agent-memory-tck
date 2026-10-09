@@ -23,8 +23,8 @@ final class JdkHttpTransport implements HttpTransport {
 
     @Override
     public CompletableFuture<HttpResult> send(HttpCall call) {
-        var publisher = call.body() instanceof HttpCall.ByteArrayBody ? HttpRequest.BodyPublishers.ofByteArray(call.body().body())
-                : HttpRequest.BodyPublishers.noBody();
+        var publisher = call.body() instanceof HttpCall.NoBody ? HttpRequest.BodyPublishers.noBody()
+                : HttpRequest.BodyPublishers.ofByteArray(call.body().body());
         var request = HttpRequest.newBuilder(call.uri()).method(call.method(), publisher);
         call.headers().forEach(request::header);
         return httpClient.sendAsync(request.build(), HttpResponse.BodyHandlers.ofByteArray())

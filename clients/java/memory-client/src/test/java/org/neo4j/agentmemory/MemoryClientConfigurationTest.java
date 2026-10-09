@@ -29,6 +29,8 @@ class MemoryClientConfigurationTest {
         var restClient = org.springframework.web.client.RestClient.create();
         var httpClient = dev.langchain4j.http.client.jdk.JdkHttpClient.builder().build();
         var executor = org.neo4j.agentmemory.testsupport.HttpClientUnderTest.TEST_EXECUTOR;
+        var webClient = org.springframework.web.reactive.function.client.WebClient.create();
+        var transport = org.neo4j.agentmemory.http.internal.HttpTransports.select(HttpClient.newHttpClient());
         var builder = MemoryClientConfiguration.builder().baseUrl("https://memory.test/v1").apiKey("key");
         assertThat(builder.restClient(restClient, executor).langChain4jHttpClient(httpClient, executor)
                 .build().httpTransport().name()).isEqualTo("langchain4j-http");
@@ -36,6 +38,24 @@ class MemoryClientConfigurationTest {
                 .build().httpTransport().name()).isEqualTo("spring-rest-client");
         assertThat(builder.langChain4jHttpClient(httpClient, executor).jdkHttpClient(HttpClient.newHttpClient())
                 .build().httpTransport().name()).isEqualTo("jdk-http");
+        assertThat(builder.restClient(restClient, executor).webClient(webClient)
+                .build().httpTransport().name()).isEqualTo("spring-web-client");
+        assertThat(builder.webClient(webClient).httpTransport(transport)
+                .build().httpTransport()).isSameAs(transport);
+        assertThat(builder.httpTransport(transport).jdkHttpClient(HttpClient.newHttpClient())
+                .build().httpTransport().name()).isEqualTo("jdk-http");
+    }
+
+    @Test
+    void rejectsNullWebClient() {
+        assertThatThrownBy(() -> MemoryClientConfiguration.builder().webClient(null))
+                .isInstanceOf(NullPointerException.class).hasMessage("webClient");
+    }
+
+    @Test
+    void rejectsNullHttpTransport() {
+        assertThatThrownBy(() -> MemoryClientConfiguration.builder().httpTransport(null))
+                .isInstanceOf(NullPointerException.class).hasMessage("httpTransport");
     }
 
     @Test

@@ -19,6 +19,7 @@ import org.neo4j.agentmemory.testsupport.OpenApiContract;
 import java.net.URI;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -30,12 +31,14 @@ class LangChain4jHttpTransportTest {
     private static final String PATH = "/v1/conversations/" + ID;
 
     @Test
-    void usesTheApplicationHttpClient(WireMockRuntimeInfo server) {
+    void usesTheApplicationHttpClientWithoutABodyForGet(WireMockRuntimeInfo server) {
         var delegate = JdkHttpClient.builder().build();
         var calls = new AtomicInteger();
+        var body = new AtomicReference<String>("unset");
         var httpClient = new HttpClient() {
             public SuccessfulHttpResponse execute(HttpRequest request) {
                 calls.incrementAndGet();
+                body.set(request.body());
                 return delegate.execute(request);
             }
 
@@ -52,6 +55,7 @@ class LangChain4jHttpTransportTest {
         client.getConversation(ID).join();
 
         assertThat(calls).hasValue(1);
+        assertThat(body.get()).isNull();
         OpenApiContract.assertEveryExchangeMatchesTheContract();
         OpenApiContract.assertOnlyDeclaredRequestProperties();
     }

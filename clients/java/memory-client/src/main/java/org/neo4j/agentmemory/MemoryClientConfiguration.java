@@ -3,6 +3,7 @@ package org.neo4j.agentmemory;
 import org.neo4j.agentmemory.http.HttpTransport;
 import org.neo4j.agentmemory.http.internal.HttpTransports;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.reactive.function.client.WebClient;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -37,6 +38,11 @@ public final class MemoryClientConfiguration {
         return apiKey;
     }
 
+    /**
+     * Returns the HTTP transport that carries memory requests: the one built
+     * from the configured HTTP client, a custom transport, or the default JDK
+     * transport.
+     */
     public HttpTransport httpTransport() {
         return httpTransport;
     }
@@ -82,8 +88,18 @@ public final class MemoryClientConfiguration {
             return this;
         }
 
-        public Builder httpTransport(HttpTransport transport) {
-            this.httpTransport = transport;
+        /**
+         * Sends memory requests through a custom transport, for an HTTP client
+         * without a built-in setter. The transport must follow the
+         * {@link HttpTransport} contract and is never closed.
+         * Replaces any HTTP client set earlier.
+         *
+         * @param httpTransport the application transport
+         * @return this builder
+         * @throws NullPointerException if httpTransport is null
+         */
+        public Builder httpTransport(HttpTransport httpTransport) {
+            this.httpTransport = Objects.requireNonNull(httpTransport, "httpTransport");
             return this;
         }
 
@@ -102,9 +118,10 @@ public final class MemoryClientConfiguration {
         }
 
         /**
-         * Uses an application-built Spring client. Its interceptors, observation
-         * registry, request-factory timeouts, and TLS settings apply. Its base URL
-         * default headers, and status handlers do not apply to memory requests.
+         * Uses an application-built Spring client. Its base URL and status
+         * handlers do not apply to memory requests; everything else configured on
+         * it does, including default headers, cookies, interceptors, observations,
+         * timeouts, and TLS settings. Memory headers replace same-named headers.
          * Blocking exchanges run on executor; neither the client nor the executor
          * is closed. Requires Spring Framework 7.0 or later.
          * Replaces any HTTP client set earlier.
@@ -116,6 +133,24 @@ public final class MemoryClientConfiguration {
          */
         public Builder restClient(RestClient restClient, Executor executor) {
             this.httpTransport = HttpTransports.select(restClient, executor);
+            return this;
+        }
+
+        /**
+         * Uses an application-built Spring reactive client without blocking. Its
+         * base URL and status handlers do not apply to memory requests; everything
+         * else configured on it does, including default headers, cookies, filters,
+         * observations, and its in-memory buffer limit, which bounds response
+         * size. Memory headers replace same-named headers. The client is never
+         * closed. Requires Spring Framework 7.0 or later.
+         * Replaces any HTTP client set earlier.
+         *
+         * @param webClient the application Spring reactive client
+         * @return this builder
+         * @throws NullPointerException if webClient is null
+         */
+        public Builder webClient(WebClient webClient) {
+            this.httpTransport = HttpTransports.select(webClient);
             return this;
         }
 

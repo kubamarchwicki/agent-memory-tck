@@ -6,7 +6,8 @@ status: accepted
 
 > Amended by [ADR 0024](0024-reuse-application-http-clients.md): the builder
 > also accepts an application HTTP client through `jdkHttpClient`,
-> `restClient`, or `langChain4jHttpClient`. The last setter called wins.
+> `restClient`, `webClient`, or `langChain4jHttpClient`, or a custom transport through
+> `httpTransport`. The last setter called wins.
 > The built configuration holds a reference to that client and does not
 > copy it; the other settings are still immutable.
 
