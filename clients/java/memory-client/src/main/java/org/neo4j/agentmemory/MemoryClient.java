@@ -12,7 +12,7 @@ import org.neo4j.agentmemory.exception.MemoryClientException;
 import org.neo4j.agentmemory.exception.MemoryServiceException;
 import org.neo4j.agentmemory.exception.MissingJsonCodecException;
 import org.neo4j.agentmemory.exception.ResponseDecodingException;
-import org.neo4j.agentmemory.internal.http.HttpMemoryClient;
+import org.neo4j.agentmemory.http.HttpMemoryClient;
 import org.neo4j.agentmemory.reasoning.NewReasoningStep;
 import org.neo4j.agentmemory.reasoning.NewToolCall;
 import org.neo4j.agentmemory.reasoning.ReasoningStep;

@@ -1,4 +1,4 @@
-package org.neo4j.agentmemory.internal.http;
+package org.neo4j.agentmemory.http;
 
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.DeserializationFeature;

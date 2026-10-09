@@ -3,7 +3,7 @@ package org.neo4j.agentmemory;
 import org.junit.jupiter.params.ParameterizedClass;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.neo4j.agentmemory.internal.http.JsonCodecUnderTest;
+import org.neo4j.agentmemory.http.JsonCodecUnderTest;
 import org.neo4j.agentmemory.testsupport.HttpClientUnderTest;
 import org.neo4j.agentmemory.conversation.Conversation;
 import org.neo4j.agentmemory.conversation.CreateConversation;

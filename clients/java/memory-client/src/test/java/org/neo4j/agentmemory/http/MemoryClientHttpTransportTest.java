@@ -1,4 +1,4 @@
-package org.neo4j.agentmemory.internal.http;
+package org.neo4j.agentmemory.http;
 
 import org.neo4j.agentmemory.MemoryClient;
 import org.neo4j.agentmemory.MemoryClientConfiguration;

@@ -1,4 +1,4 @@
-package org.neo4j.agentmemory.internal.http;
+package org.neo4j.agentmemory.http;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;

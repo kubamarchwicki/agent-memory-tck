@@ -1,4 +1,4 @@
-package org.neo4j.agentmemory.internal.http;
+package org.neo4j.agentmemory.http;
 
 import org.neo4j.agentmemory.conversation.ConversationContext;
 import org.neo4j.agentmemory.reasoning.ReasoningStepExplanation;

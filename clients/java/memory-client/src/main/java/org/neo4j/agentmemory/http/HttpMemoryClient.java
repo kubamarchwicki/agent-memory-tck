@@ -1,4 +1,4 @@
-package org.neo4j.agentmemory.internal.http;
+package org.neo4j.agentmemory.http;
 
 import org.neo4j.agentmemory.MemoryClient;
 import org.neo4j.agentmemory.MemoryClientConfiguration;
@@ -228,8 +228,8 @@ public final class HttpMemoryClient implements MemoryClient {
     public CompletableFuture<Void> deleteConversation(UUID conversationId) {
         var operation = "deleteConversation";
         return logging.call(operation, log -> {
-            var call = call("DELETE", "/conversations/{conversationId}",
-                    Map.of("conversationId", conversationId), null);
+            var call = HttpCall.delete(uriTemplate("/conversations/{conversationId}"),
+                    Map.of("conversationId", conversationId), headers());
             return exchange(operation, call, log).thenApply(result -> {
                 requireSuccess(operation, result);
                 return null;
@@ -240,7 +240,7 @@ public final class HttpMemoryClient implements MemoryClient {
     private <W, T> CompletableFuture<T> get(
             String operation, String path, Map<String, Object> variables, Class<W> wireType, Function<W, T> transform) {
         return logging.call(operation, log -> {
-            var call = call("GET", path, variables, null);
+            var call = HttpCall.get(uriTemplate(path), variables, headers());
             return exchangeAndDecode(operation, call, wireType, transform, log);
         });
     }
@@ -258,19 +258,27 @@ public final class HttpMemoryClient implements MemoryClient {
                         operation + " could not encode request JSON", failure));
             }
             log.phase(ClientLogging.Phase.REQUEST);
-            var call = call("POST", path, variables, body);
+            var call = HttpCall.post(uriTemplate(path), variables, headers(), new HttpCall.ByteArrayBody(body));
             return exchangeAndDecode(operation, call, wireType, transform, log);
         });
     }
 
-    private HttpCall call(String method, String path, Map<String, Object> variables, byte[] body) {
+    private String uriTemplate(String path) {
+        return endpoint.toString().replaceAll("/+$", "") + path;
+    }
+
+    private Map<String, String> headers() {
         var headers = new LinkedHashMap<String, String>();
         headers.put("Authorization", "Bearer " + apiKey);
         headers.put("Accept", "application/json");
-        if ("POST".equals(method)) headers.put("Content-Type", "application/json");
-        return new HttpCall(method, endpoint.toString().replaceAll("/+$", "") + path,
-                variables, headers, body);
+        headers.put("Content-Type", "application/json");
+        return headers;
     }
+
+//    private HttpCall call(String method, String path, Map<String, Object> variables, byte[] body) {
+//        return new HttpCall(method, endpoint.toString().replaceAll("/+$", "") + path,
+//                variables, headers, body);
+//    }
 
     private <W, T> CompletableFuture<T> exchangeAndDecode(
             String operation,

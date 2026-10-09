@@ -1,4 +1,4 @@
-package org.neo4j.agentmemory.internal.http;
+package org.neo4j.agentmemory.http;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
@@ -31,9 +31,7 @@ public final class LangChain4jHttpTransport implements HttpTransport {
         return CompletableFuture.supplyAsync(() -> {
             var request = HttpRequest.builder().method(HttpMethod.valueOf(call.method()))
                     .url(call.uri().toString()).addHeaders(call.headers());
-            if (call.body() != null) {
-                request.body(new String(call.body(), UTF_8));
-            }
+            request.body(new String(call.body().body(), UTF_8));
             try {
                 var response = httpClient.execute(request.build());
                 return new HttpResult(response.statusCode(), response.headers(),

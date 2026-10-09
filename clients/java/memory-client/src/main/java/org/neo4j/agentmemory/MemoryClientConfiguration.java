@@ -4,10 +4,10 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.util.Objects;
 import java.util.concurrent.Executor;
-import org.neo4j.agentmemory.internal.http.HttpTransport;
-import org.neo4j.agentmemory.internal.http.JdkHttpTransport;
-import org.neo4j.agentmemory.internal.http.LangChain4jHttpTransport;
-import org.neo4j.agentmemory.internal.http.RestClientHttpTransport;
+import org.neo4j.agentmemory.http.HttpTransport;
+import org.neo4j.agentmemory.http.JdkHttpTransport;
+import org.neo4j.agentmemory.http.LangChain4jHttpTransport;
+import org.neo4j.agentmemory.http.RestClientHttpTransport;
 import org.springframework.web.client.RestClient;
 
 /**

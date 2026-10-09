@@ -1,4 +1,4 @@
-package org.neo4j.agentmemory.internal.http;
+package org.neo4j.agentmemory.http;
 
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -20,7 +20,7 @@ public final class JdkHttpTransport implements HttpTransport {
     @Override
     public CompletableFuture<HttpResult> send(HttpCall call) {
         var publisher = call.body() == null ? HttpRequest.BodyPublishers.noBody()
-                : HttpRequest.BodyPublishers.ofByteArray(call.body());
+                : HttpRequest.BodyPublishers.ofByteArray(call.body().body());
         var request = HttpRequest.newBuilder(call.uri()).method(call.method(), publisher);
         call.headers().forEach(request::header);
         return httpClient.sendAsync(request.build(), HttpResponse.BodyHandlers.ofByteArray())

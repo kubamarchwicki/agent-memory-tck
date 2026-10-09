@@ -1,4 +1,4 @@
-package org.neo4j.agentmemory.internal.http;
+package org.neo4j.agentmemory.http;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -35,9 +35,7 @@ public final class RestClientHttpTransport implements HttpTransport {
             var request = restClient.method(HttpMethod.valueOf(call.method()))
                     .uri(call.uriTemplate(), call.uriVariables())
                     .headers(headers -> call.headers().forEach(headers::set));
-            if (call.body() != null) {
-                request.body(call.body());
-            }
+            request.body(call.body().body());
             return request.exchange((sentRequest, response) -> {
                 var headers = new LinkedHashMap<String, List<String>>();
                 response.getHeaders().forEach(headers::put);
